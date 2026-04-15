@@ -1,0 +1,52 @@
+.nav-divider {
+  width: 1px;
+  height: 24px;
+  background: var(--border-color);
+  margin: 0 10px;
+}
+
+.login-btn {
+  margin-left: 10px;
+}
+
+.mobile-menu-btn {
+  display: none;
+  background: transparent;
+  border: none;
+  color: var(--primary-color);
+  z-index: 2000;
+}
+
+@media (max-width: 768px) {
+  .mobile-menu-btn {
+    display: block;
+  }
+
+  .nav-links {
+    position: fixed;
+    top: 70px;
+    left: 0;
+    right: 0;
+    background: var(--bg-surface);
+    flex-direction: column;
+    padding: 2rem 1rem;
+    gap: 1.5rem;
+    box-shadow: var(--shadow-md);
+    transform: translateY(-150%);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+  }
+
+  .nav-links.mobile-open {
+    transform: translateY(0);
+  }
+
+  .hidden-mobile {
+    display: none;
+  }
+
+  .login-btn {
+    margin-left: 0;
+    width: 100%;
+  }
+}

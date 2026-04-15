@@ -1,0 +1,126 @@
+import React from 'react';
+import { Link } from 'react-router-dom';
+import { Shield, BellRing, FileText, Brain, CreditCard, Users } from 'lucide-react';
+import '../../styles/Home.css';
+
+const Home = () => {
+  return (
+    <div className="fade-in">
+      <div className="container">
+        {/* Hero Section */}
+        <div className="text-center home-hero">
+          <h1 className="home-hero-title">
+            Welcome to the <span className="text-gradient">Smart Municipality</span>
+          </h1>
+          <p className="home-hero-desc">
+            Bridging the gap between citizens and city officials. Report issues, track their resolution, and pay your dues seamlessly through our AI-powered portal.
+          </p>
+          <div className="flex justify-center gap-4">
+            <Link to="/guest/register" className="btn btn-primary home-btn">
+              Get Started
+            </Link>
+            <Link to="/guest/announcements" className="btn btn-outline home-btn">
+              View Announcements
+            </Link>
+          </div>
+        </div>
+
+        {/* Urgent Announcements */}
+        <div className="glass-panel urgent-panel">
+          <div className="flex items-center gap-2 mb-2">
+            <BellRing size={20} color="var(--danger-color)" />
+            <h3 className="urgent-title">Urgent Announcements</h3>
+          </div>
+          <p className="urgent-text-margin">
+            <strong>Water Main Break on Hamra Street:</strong> Repair crews are currently on-site. Expected resolution time is 4 hours.
+          </p>
+          <p className="urgent-text-nomargin">
+            <strong>Storm Warning:</strong> Please ensure all loose outdoor items are secured. Heavy winds expected this evening.
+          </p>
+        </div>
+
+        {/* Features Grid */}
+        <div className="text-center mb-8">
+          <h2>How SMDSS Works</h2>
+          <p className="page-subtitle">An end-to-end platform for smarter municipal governance powered by AI.</p>
+        </div>
+        
+        <div className="grid md:grid-cols-3 gap-6 features-grid">
+          {/* Card 1 */}
+          <div className="glass-panel feature-card">
+            <div className="feature-icon mb-3">
+              <FileText size={28} color="var(--primary-color)" />
+            </div>
+            <h3 className="feature-title">Smart Complaints</h3>
+            <p className="feature-desc">Submit and track complaints with AI-powered prioritization.</p>
+          </div>
+          
+          {/* Card 2 */}
+          <div className="glass-panel feature-card">
+            <div className="feature-icon mb-3">
+              <Brain size={28} color="var(--primary-color)" />
+            </div>
+            <h3 className="feature-title">AI Engine</h3>
+            <p className="feature-desc">Automatic categorization, duplicate detection & priority scoring.</p>
+          </div>
+          
+          {/* Card 3 */}
+          <div className="glass-panel feature-card">
+            <div className="feature-icon mb-3">
+              <BellRing size={28} color="var(--primary-color)" />
+            </div>
+            <h3 className="feature-title">Announcements</h3>
+            <p className="feature-desc">Stay updated with public notifications and urgent alerts.</p>
+          </div>
+          
+          {/* Card 4 */}
+          <div className="glass-panel feature-card">
+            <div className="feature-icon mb-3">
+              <CreditCard size={28} color="var(--primary-color)" />
+            </div>
+            <h3 className="feature-title">Digital Dues</h3>
+            <p className="feature-desc">View and manage your property taxes and municipal bills.</p>
+          </div>
+          
+          {/* Card 5 */}
+          <div className="glass-panel feature-card">
+            <div className="feature-icon mb-3">
+              <Shield size={28} color="var(--primary-color)" />
+            </div>
+            <h3 className="feature-title">Transparency</h3>
+            <p className="feature-desc">Real-time status tracking on all submitted complaints.</p>
+          </div>
+          
+          {/* Card 6 */}
+          <div className="glass-panel feature-card">
+            <div className="feature-icon mb-3">
+              <Users size={28} color="var(--primary-color)" />
+            </div>
+            <h3 className="feature-title">Citizen First</h3>
+            <p className="feature-desc">Bridging the gap between citizens and municipal authorities.</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Stats Banner */}
+      <div className="stats-banner">
+        <div className="container grid md:grid-cols-3 text-center">
+          <div className="stat-item">
+            <h2 className="stat-value text-gradient" style={{color: 'white', WebkitTextFillColor: 'white'}}>2,400+</h2>
+            <p className="stat-label">Complaints Resolved</p>
+          </div>
+          <div className="stat-item">
+            <h2 className="stat-value text-gradient" style={{color: 'white', WebkitTextFillColor: 'white'}}>98%</h2>
+            <p className="stat-label">Citizen Satisfaction</p>
+          </div>
+          <div className="stat-item">
+            <h2 className="stat-value text-gradient" style={{color: 'white', WebkitTextFillColor: 'white'}}>&lt; 48h</h2>
+            <p className="stat-label">Avg. Response Time</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Home;

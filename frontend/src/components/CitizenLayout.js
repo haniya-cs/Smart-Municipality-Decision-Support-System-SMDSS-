@@ -1,0 +1,82 @@
+import React from 'react';
+import { NavLink, Outlet, useNavigate } from 'react-router-dom';
+import { Home, LayoutDashboard, FilePlus, FileText, CreditCard, LogOut, Building2 } from 'lucide-react';
+import '../styles/CitizenLayout.css';
+
+const CitizenLayout = () => {
+  const navigate = useNavigate();
+
+  const handleSignOut = () => {
+    // Basic sign out routine simulation
+    navigate('/');
+  };
+
+  return (
+    <div className="citizen-layout">
+      {/* Sidebar Navigation */}
+      <aside className="citizen-sidebar">
+        <div className="sidebar-header">
+          <div className="sidebar-logo-wrapper">
+            <Building2 size={24} className="sidebar-logo-icon" />
+          </div>
+          <div>
+            <h2 className="sidebar-title">Citizen Portal</h2>
+            <p className="sidebar-subtitle">My Services</p>
+          </div>
+        </div>
+
+        <nav className="sidebar-nav">
+          <NavLink to="/" className="sidebar-link public-link">
+            <Home size={18} />
+            Public Site
+          </NavLink>
+
+          <div className="nav-section-title">MY SERVICES</div>
+
+          <NavLink to="/citizen/dashboard" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+            <LayoutDashboard size={18} />
+            Dashboard
+          </NavLink>
+
+          <NavLink to="/citizen/complaint" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+            <FilePlus size={18} />
+            New Complaint
+          </NavLink>
+
+          <NavLink to="/citizen/complaints" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+            <FileText size={18} />
+            My Complaints
+          </NavLink>
+
+          <NavLink to="/citizen/dues" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+            <CreditCard size={18} />
+            My Dues
+          </NavLink>
+        </nav>
+
+        <div className="sidebar-footer">
+          <div className="user-profile">
+            <div className="avatar">R</div>
+            <div className="user-info">
+              <h4 className="user-name">Rania El Ghazzi</h4>
+              <p className="user-email">elghazzirania@gmail.com</p>
+            </div>
+          </div>
+          
+          <button className="sign-out-btn" onClick={handleSignOut}>
+            <LogOut size={18} />
+            Sign Out
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Content Area */}
+      <main className="citizen-main-content">
+        <div className="top-padding-bar"></div>
+        <Outlet />
+      </main>
+    </div>
+  );
+};
+
+export default CitizenLayout;

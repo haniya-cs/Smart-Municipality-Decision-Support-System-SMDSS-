@@ -1,0 +1,149 @@
+.footer-container {
+  background-color: var(--bg-surface);
+  border-top: 1px solid var(--border-color);
+  margin-top: 4rem;
+  padding-top: 3rem;
+}
+
+.footer-grid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+@media (min-width: 768px) {
+  .footer-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+.footer-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.border-left-responsive {
+  border-left: none;
+}
+
+@media (min-width: 768px) {
+  .border-left-responsive {
+    border-left: 1px solid var(--border-color);
+    padding-left: 2rem;
+  }
+}
+
+.footer-text {
+  color: var(--text-muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.footer-heading {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-main);
+  margin-bottom: 1.25rem;
+}
+
+.footer-links {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.footer-links li a {
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.2s ease;
+  font-size: 0.95rem;
+}
+
+.footer-links li a:hover {
+  color: var(--primary-color);
+}
+
+.footer-contact-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.footer-contact-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.95rem;
+}
+
+.contact-icon {
+  color: var(--primary-color);
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.working-hours {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  background: var(--bg-color);
+  padding: 1rem;
+  border-radius: var(--border-radius-md);
+}
+
+.social-links {
+  display: flex;
+  gap: 1rem;
+}
+
+.social-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--bg-color);
+  color: var(--text-muted);
+  transition: all 0.2s ease;
+}
+
+.social-icon:hover {
+  background: var(--primary-color);
+  color: #fff;
+}
+
+.footer-bottom {
+  background-color: var(--bg-color);
+  padding: 1.25rem 0;
+  border-top: 1px solid var(--border-color);
+}
+
+.copyright-text {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.footer-bottom-links {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.footer-bottom-links a {
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  transition: color 0.2s ease;
+}
+
+.footer-bottom-links a:hover {
+  color: var(--text-main);
+}

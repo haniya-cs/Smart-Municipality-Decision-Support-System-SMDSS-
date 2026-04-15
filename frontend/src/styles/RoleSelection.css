@@ -1,0 +1,40 @@
+.role-selection-card {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  background: var(--bg-surface-glass);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.role-selection-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--primary-color);
+  transform: translateY(-2px);
+}
+
+.role-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.citizen-icon {
+  background: rgba(13, 110, 253, 0.1);
+}
+
+.admin-icon {
+  background: rgba(220, 53, 69, 0.1);
+}
+
+.text-left {
+  text-align: left;
+}
