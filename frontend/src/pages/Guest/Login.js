@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { User, ShieldAlert } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import '../../styles/Register.css'; // Reusing similar classes like register-container, register-panel
+import '../../styles/Register.css'; 
 
 const Login = () => {
   const [citizenId, setCitizenId] = useState('');
@@ -10,32 +10,43 @@ const Login = () => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (!citizenId.trim() || !password.trim()) return;
+    if (!citizenId.trim() || !password.trim()) {
+      setError('Citizen ID and password are required.');
+      return;
+    }
 
     setIsLoggingIn(true);
     setError('');
 
-    // Simulate login logic based on Citizen ID
-    setTimeout(() => {
-      setIsLoggingIn(false);
-      
-      // Dummy Logic for Routing based on simulated roles:
-      // ID starts with '1' => Citizen
-      // ID starts with '2' => Admin
-      // ID starts with '3' => Both (Citizen & Admin)
-      if (citizenId.startsWith('1')) {
-        navigate('/citizen/dashboard');
-      } else if (citizenId.startsWith('2')) {
-        navigate('/admin/dashboard');
-      } else if (citizenId.startsWith('3')) {
-        navigate('/role-selection');
+    try {
+      const response = await fetch('http://localhost:5000/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ citizen_id: citizenId, password }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        // Check the role and navigate accordingly
+        if (data.role === 'admin') {
+          navigate('/admin/dashboard');
+        } else if (data.role === 'citizen') {
+          navigate('/citizen/dashboard');
+        } else {
+          setError('Access denied. Unknown role.');
+        }
       } else {
-        // Default to Citizen if they enter something else
-        navigate('/citizen/dashboard');
+        // Handle errors from the server
+        setError(data.error || 'Login failed. Please try again.');
       }
-    }, 1000);
+    } catch (err) {
+      setError('Network error. Please try again.');
+    } finally {
+      setIsLoggingIn(false);
+    }
   };
 
   return (
@@ -46,16 +57,16 @@ const Login = () => {
             <User size={30} color="var(--primary-color)" />
           </div>
           <h2 className="title-margin">Welcome Back</h2>
-          <p className="subtitle">Enter your credentials to manage your account.</p>
+          <p className="subtitle">Enter your credentials to manage your account (Citizen/Admin)</p>
         </div>
 
         <form onSubmit={handleLogin}>
           <div className="form-group">
-            <label className="form-label">Citizen ID Number / Employee ID</label>
+            <label className="form-label">Citizen ID Number</label>
             <input 
               type="text" 
               className="form-control" 
-              placeholder="E.g. 1000000001" 
+              placeholder="E.g. LB-1XXX" 
               value={citizenId}
               onChange={(e) => setCitizenId(e.target.value)}
               required
@@ -77,10 +88,6 @@ const Login = () => {
                 <ShieldAlert size={16} /> <span>{error}</span>
               </div>
             )}
-          </div>
-
-          <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '1rem', textAlign: 'center' }}>
-             (Simulate: starts with '1' = Citizen, '2' = Admin, '3' = Both)
           </div>
 
           <button 
