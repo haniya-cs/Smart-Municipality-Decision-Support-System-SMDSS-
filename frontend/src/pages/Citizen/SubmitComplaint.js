@@ -8,15 +8,37 @@ const SubmitComplaint = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
-    // Simulate AI processing & DB save delay
-    setTimeout(() => {
+
+    // Get citizen_id from session
+    const session = JSON.parse(localStorage.getItem('smdss_session') || '{}');
+    const citizenId = session.citizen_id || 'LB-1004'; // Default for testing if not found
+
+    try {
+      const response = await fetch('http://localhost:5000/api/complaints', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          citizen_id: citizenId,
+          description: description,
+          location: '' // We can add location tracking state later if needed
+        })
+      });
+
+      if (response.ok) {
+        navigate('/citizen/complaints');
+      } else {
+        const errData = await response.json();
+        alert("Failed to submit complaint: " + (errData.error || "Unknown error"));
+      }
+    } catch (err) {
+      console.error("Network error:", err);
+      alert("Network error occurred.");
+    } finally {
       setIsSubmitting(false);
-      navigate('/citizen/dashboard');
-    }, 2000);
+    }
   };
 
   return (
@@ -31,9 +53,9 @@ const SubmitComplaint = () => {
           <form onSubmit={handleSubmit}>
             <div className="form-group">
               <label className="form-label">Issue Description (Required)</label>
-              <textarea 
-                className="form-control complaint-textarea" 
-                rows="5" 
+              <textarea
+                className="form-control complaint-textarea"
+                rows="5"
                 placeholder="E.g., There is a massive water pipe explosion on Street A..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
@@ -54,7 +76,7 @@ const SubmitComplaint = () => {
                   <input type="text" className="form-control input-with-icon" placeholder="Street name or landmark..." />
                 </div>
               </div>
-              
+
               <div className="form-group form-group-nomargin">
                 <label className="form-label">Attach Photo (Optional)</label>
                 <div className="input-icon-wrapper">
@@ -70,9 +92,9 @@ const SubmitComplaint = () => {
               <button type="button" className="btn btn-outline" onClick={() => navigate(-1)}>
                 Cancel
               </button>
-              <button 
-                type="submit" 
-                className="btn btn-primary submit-btn" 
+              <button
+                type="submit"
+                className="btn btn-primary submit-btn"
                 disabled={isSubmitting || description.trim() === ''}
               >
                 {isSubmitting ? 'AI Engine Processing...' : 'Submit to AI Engine'} <Send size={18} />

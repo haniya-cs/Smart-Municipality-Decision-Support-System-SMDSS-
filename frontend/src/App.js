@@ -21,8 +21,12 @@ import MyDues from './pages/Citizen/MyDues';
 
 // Admin Pages
 import AdminDashboard from './pages/Admin/Dashboard';
+import AdminAnnouncements from './pages/Admin/Announcements';
+import AdminDues from './pages/Admin/Dues';
+import AdminCitizens from './pages/Admin/Citizens';
 
 import CitizenLayout from './components/CitizenLayout';
+import AdminLayout from './components/AdminLayout'; // Import Admin Layout
 
 function Layout() {
   return (
@@ -47,10 +51,6 @@ function App() {
           <Route path="guest/register" element={<Register />} />
           <Route path="guest/login" element={<Login />} />
           <Route path="role-selection" element={<RoleSelection />} />
-          
-          <Route path="admin">
-            <Route path="dashboard" element={<AdminDashboard />} />
-          </Route>
         </Route>
 
         {/* Citizen Routes with specialized Sidebar layout */}
@@ -60,9 +60,18 @@ function App() {
           <Route path="complaints" element={<MyComplaints />} />
           <Route path="dues" element={<MyDues />} />
         </Route>
+
+        {/* Admin Routes with specialized Sidebar layout */}
+        <Route path="/admin" element={<AdminLayout />}>
+          <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="announcements" element={<AdminAnnouncements />} />
+          <Route path="dues" element={<AdminDues />} />
+          <Route path="users" element={<AdminCitizens />} />
+        </Route>
       </Routes>
     </Router>
   );
 }
 
 export default App;
+

@@ -1,204 +1,199 @@
-import React from 'react';
-import { AlertTriangle, Users, Map, MoreVertical, Zap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { 
+  AlertTriangle, Users, Map, Zap, CheckCircle2, 
+  FileText, Activity, Bell, Shield 
+} from 'lucide-react';
 import '../../styles/Dashboard.css';
+import '../../styles/CitizenLayout.css'; 
+import '../../styles/AdminDashboard.css';
 
+/**
+ * MOCK DATA
+ * Represents the structure expected from the backend API.
+ * Defines statistics, complaint clusters, and recent system activities.
+ */
+const SYSTEM_STATS = [
+  { id: 'stat-1', title: 'High Priority', value: '12', trend: '↑ 3 since yesterday', type: 'danger', icon: AlertTriangle },
+  { id: 'stat-2', title: 'Pending Issues', value: '48', trend: '15 waiting for review', type: 'warning', icon: Map },
+  { id: 'stat-3', title: 'Dues Collected', value: '$45.2K', trend: '↑ +12% this month', type: 'success', icon: CheckCircle2 },
+  { id: 'stat-4', title: 'Registered Citizens', value: '1,204', trend: '8 new today', type: 'info', icon: Users }
+];
+
+const COMPLAINT_CLUSTERS = [
+  { id: 'c-1', title: 'Main water pipe explosion', category: 'Infrastructure', count: 15, priority: 'CRITICAL', status: 'Pending', type: 'danger' },
+  { id: 'c-2', title: 'Large pothole on 4th Ave', category: 'Roads', count: 3, priority: 'MEDIUM', status: 'In Progress', type: 'warning' },
+  { id: 'c-3', title: 'Streetlight out', category: 'Electricity', count: 1, priority: 'LOW', status: 'Pending', type: 'info' }
+];
+
+const RECENT_ACTIVITIES = [
+  { id: 'a-1', user: 'LB-1004', action: 'submitted a new complaint.', time: 'Just now', icon: AlertTriangle, colorClass: 'blue' },
+  { id: 'a-2', user: 'LB-2041', action: 'paid $45.00 dues.', time: '15 mins ago', icon: CheckCircle2, colorClass: 'green' },
+  { id: 'a-3', user: 'System', action: 'New citizen registration pending review.', time: '2 hours ago', icon: Users, colorClass: 'yellow' },
+  { id: 'a-4', user: 'System', action: 'Automated backup completed.', time: 'Yesterday', icon: Shield, colorClass: 'gray' }
+];
+
+/**
+ * SUB-COMPONENTS
+ * Abstracting repetitive UI elements into reusable functional components.
+ */
+const StatCard = ({ stat }) => {
+  const Icon = stat.icon;
+  return (
+    <div className={`dashboard-stat-card admin-stat-card ${stat.type}`}>
+      <div className="stat-card-header">
+        <div className={`stat-icon-wrapper ${stat.type}`}>
+          <Icon size={20} color={stat.type === 'danger' ? '#e11d48' : stat.type === 'warning' ? '#f59e0b' : stat.type === 'success' ? '#10b981' : '#3b82f6'} />
+        </div>
+        <span className="stat-card-title">{stat.title}</span>
+      </div>
+      <h2 className="stat-card-value-lg stat-card-value-premium">{stat.value}</h2>
+      <p className={`stat-trend ${stat.type}`}>{stat.trend}</p>
+    </div>
+  );
+};
+
+const ClusterRow = ({ cluster }) => (
+  <tr className={cluster.priority === 'CRITICAL' ? 'row-critical' : ''}>
+    <td>
+      <span className={`badge badge-${cluster.type}`}>{cluster.priority}</span>
+    </td>
+    <td>
+      <strong className="cluster-title-main">{cluster.title}</strong>
+      <span className={`cluster-subtag ${cluster.priority === 'CRITICAL' ? 'danger' : 'normal'}`}>
+        {cluster.category}
+      </span>
+    </td>
+    <td>
+      <select className="form-control status-select-sm" defaultValue={cluster.status}>
+        <option value="Pending">Pending</option>
+        <option value="In Progress">In Progress</option>
+        <option value="Resolved">Resolved</option>
+      </select>
+    </td>
+    <td style={{ textAlign: 'center' }}>
+      <span className={`count-badge ${cluster.priority === 'CRITICAL' ? 'danger' : 'normal'}`}>
+        {cluster.count}
+      </span>
+    </td>
+  </tr>
+);
+
+const ActivityItem = ({ activity }) => {
+  const Icon = activity.icon;
+  return (
+    <div className="activity-item">
+      <div className={`activity-icon-wrapper ${activity.colorClass}`}>
+        <Icon size={16} />
+      </div>
+      <div>
+        <p className="activity-text">
+          <strong>{activity.user !== 'System' ? activity.user : ''}</strong> {activity.action}
+        </p>
+        <span className="activity-time">{activity.time}</span>
+      </div>
+    </div>
+  );
+};
+
+/**
+ * MAIN COMPONENT: AdminDashboard
+ * Orchestrates the layout and renders the modularized sub-components.
+ */
 const AdminDashboard = () => {
+  const [chartData] = useState([40, 60, 45, 80, 50, 90, 75]); // Mock weekly resolution data
+
   return (
     <div className="container fade-in">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="page-header">Central Admin Dashboard</h1>
-          <p className="page-subtitle">Overview of municipality health and AI-prioritized tasks</p>
+      {/* Header Section */}
+      <header className="flex justify-between items-center mb-6">
+        <div className="citizen-welcome" style={{ marginBottom: 0 }}>
+          <h1>Central Admin Dashboard</h1>
+          <p>Overview of municipality health and AI-prioritized tasks.</p>
         </div>
-      </div>
+        <div className="admin-quick-actions">
+          <button className="btn btn-outline admin-action-btn">
+            <FileText size={16} /> Export Report
+          </button>
+          <button className="btn btn-primary admin-action-btn">
+            <Bell size={16} /> Broadcast Alert
+          </button>
+        </div>
+      </header>
 
-      {/* Stats row */}
-      <div className="grid md:grid-cols-4 gap-4 mb-8">
-        <div className="glass-panel stat-panel-padding">
-          <div className="flex justify-between items-center mb-2">
-            <h5 className="stat-card-title">High Priority</h5>
-            <AlertTriangle size={18} color="var(--danger-color)" />
-          </div>
-          <h2 className="stat-danger-value">12</h2>
-        </div>
+      {/* Statistics Grid */}
+      <section className="dashboard-stats-grid mb-8">
+        {SYSTEM_STATS.map(stat => (
+          <StatCard key={stat.id} stat={stat} />
+        ))}
+      </section>
+
+      {/* Main Dashboard Content - Two Column Grid */}
+      <main className="admin-dashboard-grid">
         
-        <div className="glass-panel stat-panel-padding">
-          <div className="flex justify-between items-center mb-2">
-            <h5 className="stat-card-title">Pending Issues</h5>
-            <Map size={18} color="var(--warning-color)" />
-          </div>
-          <h2 className="stat-normal-value">48</h2>
-        </div>
-
-        <div className="glass-panel stat-panel-padding">
-          <div className="flex justify-between items-center mb-2">
-            <h5 className="stat-card-title">Dues Collected</h5>
-            <span className="stat-success-label">$</span>
-          </div>
-          <h2 className="stat-normal-value">$45K</h2>
-        </div>
-        
-        <div className="glass-panel stat-panel-padding">
-          <div className="flex justify-between items-center mb-2">
-            <h5 className="stat-card-title">Registered Citizens</h5>
-            <Users size={18} color="var(--primary-color)" />
-          </div>
-          <h2 className="stat-normal-value">1,204</h2>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-2 mb-4">
-        <Zap size={24} color="var(--warning-color)" />
-        <h2 className="board-title">Smart Complaints Review Board</h2>
-      </div>
-      <p className="board-subtitle">AI has clustered duplicate reports and re-ordered this list by true priority and severity.</p>
-
-      <div className="glass-panel table-wrapper">
-        <table className="custom-table">
-          <thead>
-            <tr>
-              <th>AI Priority</th>
-              <th>Issue Vector / Cluster</th>
-              <th>Category</th>
-              <th>Status</th>
-              <th>Reports Count</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {/* High Priority Cluster */}
-            <tr className="priority-high-row">
-              <td>
-                <span className="badge badge-danger">CRITICAL</span>
-              </td>
-              <td>
-                <div className="cluster-title">Main water pipe explosion</div>
-                <div className="cluster-keywords-danger">Keywords: "danger", "flood", "explosion"</div>
-              </td>
-              <td className="cluster-category">Infrastructure</td>
-              <td>
-                <select className="form-control status-select">
-                  <option value="pending">Pending</option>
-                  <option value="progress">In Progress</option>
-                  <option value="resolved">Resolved</option>
-                </select>
-              </td>
-              <td>
-                <span className="badge cluster-count-badge">15 Duplicates clustered</span>
-              </td>
-              <td className="text-right">
-                <button className="btn btn-outline action-btn"><MoreVertical size={16}/></button>
-              </td>
-            </tr>
-
-            {/* Medium Priority */}
-            <tr>
-              <td>
-                <span className="badge badge-warning">MEDIUM</span>
-              </td>
-              <td>
-                <div className="cluster-title">Large pothole on 4th Ave</div>
-                <div className="cluster-keywords-normal">Keywords: "car damage", "deep hole"</div>
-              </td>
-              <td className="cluster-category">Roads</td>
-              <td>
-                <select className="form-control status-select">
-                  <option value="pending">Pending</option>
-                  <option value="progress">In Progress</option>
-                  <option value="resolved">Resolved</option>
-                </select>
-              </td>
-              <td>
-                <span className="badge cluster-count-badge">3 Reports clustered</span>
-              </td>
-              <td className="text-right">
-                <button className="btn btn-outline action-btn"><MoreVertical size={16}/></button>
-              </td>
-            </tr>
-
-            {/* Low Priority */}
-            <tr>
-              <td>
-                <span className="badge badge-info">LOW</span>
-              </td>
-              <td>
-                <div className="cluster-title">Streetlight out</div>
-                <div className="cluster-keywords-normal">Keywords: "dark", "broken light"</div>
-              </td>
-              <td className="cluster-category">Electricity</td>
-              <td>
-                <select className="form-control status-select">
-                  <option value="pending">Pending</option>
-                  <option value="progress">In Progress</option>
-                  <option value="resolved">Resolved</option>
-                </select>
-              </td>
-              <td>
-                <span className="cluster-count-text">Unique report</span>
-              </td>
-              <td className="text-right">
-                <button className="btn btn-outline action-btn"><MoreVertical size={16}/></button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      {/* Post New Announcement Section */}
-      <div className="flex items-center gap-2 mb-4 mt-8">
-        <AlertTriangle size={24} color="var(--primary-color)" />
-        <h2 className="board-title">Publish New Announcement</h2>
-      </div>
-      <p className="board-subtitle">Create and publish public announcements to be displayed on the Guest and Citizen portals.</p>
-
-      <div className="glass-panel text-left">
-        <form onSubmit={(e) => e.preventDefault()}>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="form-group mb-0">
-              <label className="form-label">Announcement Title</label>
-              <input type="text" className="form-control" placeholder="E.g., Water Cut in West District" />
+        {/* Left Column: Analytics & Review Board */}
+        <section className="dashboard-main-content">
+          
+          {/* Resolution Chart */}
+          <div className="dashboard-panel" style={{ marginBottom: '1.5rem' }}>
+            <h3 className="panel-title mb-4">
+              <Activity size={18} /> Municipality Issue Resolution Rate
+            </h3>
+            <div className="mockup-chart-container">
+              {chartData.map((height, i) => (
+                <div key={i} className="mockup-bar-wrapper">
+                  <div 
+                    className="mockup-bar" 
+                    style={{ height: `${height}%`, opacity: i === chartData.length - 1 ? 1 : 0.6 }}
+                  />
+                </div>
+              ))}
             </div>
-            
-            <div className="form-group mb-0">
-              <label className="form-label">Announcement Type</label>
-              <select className="form-control">
-                <option value="urgent">Urgent / Alert (طوارئ)</option>
-                <option value="event">Event / Festival (فعاليات ومهرجانات)</option>
-                <option value="general">General Info / Ads (إعلانات عامة)</option>
-                <option value="meeting">Meeting / Hearing (جلسات واجتماعات)</option>
-                <option value="maintenance">Scheduled Maintenance (صيانة مجدولة)</option>
-              </select>
-            </div>
-            
-            <div className="form-group mb-0">
-              <label className="form-label">Publish Start Date</label>
-              <input type="datetime-local" className="form-control" />
-            </div>
-            
-            <div className="form-group mb-0">
-              <label className="form-label">Publish End Date (Expiry)</label>
-              <input type="datetime-local" className="form-control" />
+            <div className="mockup-labels">
+              <span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span><span>Today</span>
             </div>
           </div>
 
-          <div className="form-group mt-4">
-            <label className="form-label">Announcement Content</label>
-            <textarea className="form-control" rows="4" placeholder="Detailed description of the announcement..."></textarea>
+          {/* AI Smart Board */}
+          <div className="flex items-center gap-2 mb-4">
+            <Zap size={24} color="var(--warning-color)" />
+            <h2 className="board-title">Smart Complaints Review Board</h2>
           </div>
+          
+          <div className="dashboard-panel" style={{ padding: 0, overflow: 'hidden' }}>
+            <table className="custom-table smart-board-table">
+              <thead style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                <tr>
+                  <th>AI Priority</th>
+                  <th>Issue Vector / Cluster</th>
+                  <th>Status</th>
+                  <th style={{ textAlign: 'center' }}>Reports</th>
+                </tr>
+              </thead>
+              <tbody>
+                {COMPLAINT_CLUSTERS.map(cluster => (
+                  <ClusterRow key={cluster.id} cluster={cluster} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
 
-          <div className="form-group mt-4">
-            <label className="form-label">Upload Image (Optional)</label>
-            <input type="file" className="form-control" accept="image/*" style={{ paddingTop: '0.5rem', paddingBottom: '0.5rem' }} />
-            <small style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Accepted formats: JPG, PNG, GIF. Max size: 5MB.</small>
+        {/* Right Column: Live Activity Feed */}
+        <aside>
+          <div className="dashboard-panel activity-feed-container">
+            <h3 className="panel-title mb-4">
+              <Activity size={18} /> Live Activity Feed
+            </h3>
+            <div className="activity-feed-list">
+              {RECENT_ACTIVITIES.map(activity => (
+                <ActivityItem key={activity.id} activity={activity} />
+              ))}
+            </div>
+            <button className="btn btn-outline full-log-btn">View Full Audit Log</button>
           </div>
+        </aside>
 
-          <div className="flex justify-end mt-4">
-            <button type="submit" className="btn btn-primary">
-              Publish Announcement
-            </button>
-          </div>
-        </form>
-      </div>
+      </main>
     </div>
   );
 };

@@ -60,6 +60,16 @@ const Register = () => {
       const data = await response.json();
       
       if (response.ok) {
+        localStorage.setItem(
+          'smdss_session',
+          JSON.stringify({
+            role: data.role_id === 2 ? 'citizen' : 'unknown',
+            citizen_id: data.citizen_id || citizenId,
+            full_name: fullName || '',
+            email: data.email || email
+          })
+        );
+
         if (data.role_id === 2) {
           navigate('/citizen/dashboard');
         } else {
