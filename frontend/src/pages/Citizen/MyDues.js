@@ -72,11 +72,19 @@ const MyDues = () => {
         </div>
       </div>
 
-      {isLoading && <p>Loading dues...</p>}
+      {isLoading && (
+        <div style={{ textAlign: 'center', padding: '5rem', color: '#64748b' }}>
+          Loading your property dues...
+        </div>
+      )}
       {!isLoading && error && <p style={{ color: 'var(--danger-color)' }}>{error}</p>}
       {!isLoading && !error && properties.length === 0 && (
-        <div className="glass-panel">
-          <p style={{ margin: 0 }}>No property dues found. Citizens without properties do not have dues.</p>
+        <div className="empty-state-container" style={{ borderColor: '#e2e8f0', backgroundColor: '#f8fafc', padding: '4rem 2rem' }}>
+          <Building size={48} color="#cbd5e1" strokeWidth={1.5} />
+          <h3 style={{ marginTop: '1rem', color: '#475569', fontWeight: 600 }}>No Properties Found</h3>
+          <p className="empty-state-text" style={{ color: '#64748b', maxWidth: '400px', margin: '0.5rem auto 0' }}>
+            You currently do not have any properties registered under your name in this municipality. Therefore, no municipal dues or utility bills apply to you.
+          </p>
         </div>
       )}
 

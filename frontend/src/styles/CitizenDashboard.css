@@ -1,0 +1,106 @@
+/* CitizenDashboard.css */
+
+.citizen-dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .citizen-dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Premium Stat Cards for Citizen */
+.citizen-stat-card {
+  border-top-width: 4px;
+  border-top-style: solid;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.citizen-stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.citizen-stat-card.warning { border-top-color: #f59e0b; }
+.citizen-stat-card.info { border-top-color: #3b82f6; }
+.citizen-stat-card.success { border-top-color: #10b981; }
+.citizen-stat-card.danger { border-top-color: #e11d48; }
+
+.citizen-icon-wrapper {
+  padding: 8px;
+  border-radius: 50%;
+}
+
+.citizen-icon-wrapper.warning { background-color: #fef3c7; }
+.citizen-icon-wrapper.info { background-color: #dbeafe; }
+.citizen-icon-wrapper.success { background-color: #d1fae5; }
+.citizen-icon-wrapper.danger { background-color: #ffe4e6; }
+
+/* List Items */
+.dashboard-list-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-radius: 8px;
+  background-color: #f8fafc;
+  margin-bottom: 0.75rem;
+  transition: background-color 0.2s;
+  border: 1px solid #e2e8f0;
+}
+
+.dashboard-list-item:hover {
+  background-color: #f1f5f9;
+}
+
+.list-item-content {
+  flex: 1;
+}
+
+.list-item-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 4px;
+}
+
+.list-item-desc {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 90%;
+}
+
+.list-item-amount {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #e11d48;
+}
+
+/* Empty States */
+.empty-state-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  text-align: center;
+  color: #94a3b8;
+  background-color: #f8fafc;
+  border-radius: 8px;
+  border: 1px dashed #cbd5e1;
+}
+
+.empty-state-text {
+  margin-top: 1rem;
+  font-weight: 500;
+}

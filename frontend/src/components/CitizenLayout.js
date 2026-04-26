@@ -8,8 +8,11 @@ const CitizenLayout = () => {
 
   const handleSignOut = () => {
     // Basic sign out routine simulation
+    localStorage.removeItem('smdss_session');
     navigate('/');
   };
+
+  const session = JSON.parse(localStorage.getItem('smdss_session') || '{}');
 
   return (
     <div className="citizen-layout">
@@ -56,10 +59,16 @@ const CitizenLayout = () => {
 
         <div className="sidebar-footer">
           <div className="user-profile">
-            <div className="avatar">R</div>
+            <div className="avatar">
+              {session.full_name ? session.full_name.charAt(0).toUpperCase() : 'C'}
+            </div>
             <div className="user-info">
-              <h4 className="user-name">Rania El Ghazzi</h4>
-              <p className="user-email">elghazzirania@gmail.com</p>
+              <h4 className="user-name" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {session.full_name || 'Citizen'}
+              </h4>
+              <p className="user-email" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {session.email || session.citizen_id}
+              </p>
             </div>
           </div>
           
