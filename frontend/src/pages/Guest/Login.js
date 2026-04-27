@@ -30,25 +30,21 @@ const Login = () => {
       const data = await response.json();
 
       if (response.ok) {
-        if (data.citizen_id) {
-          localStorage.setItem(
-            'smdss_session',
-            JSON.stringify({
-              role: data.role,
-              citizen_id: data.citizen_id,
-              full_name: data.full_name || '',
-              email: data.email || ''
-            })
-          );
-        }
-
+      
         // Check the role and navigate accordingly
-        if (data.role === 'admin') {
-          navigate('/admin/dashboard');
-        } else if (data.role === 'citizen') {
-          navigate('/citizen/dashboard');
+        if (data.roles && data.roles.length > 1) {
+          navigate('/role-selection', { state: { roles: data.roles } });
+        } else if (data.roles && data.roles.length === 1) {
+          const role = data.roles[0];
+          if (role === 1) {
+            navigate('/admin/dashboard');
+          } else if (role === 2) {
+            navigate('/citizen/dashboard');
+          } else {
+            setError('Access denied. Unknown role.');
+          }
         } else {
-          setError('Access denied. Unknown role.');
+          setError('Access denied. No roles found.');
         }
       } else {
         // Handle errors from the server
