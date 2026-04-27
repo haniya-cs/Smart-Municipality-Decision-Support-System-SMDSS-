@@ -1,9 +1,9 @@
-const mysql = require("mysql2");
+const mysql = require ("mysql2");
 const db = mysql.createConnection({
   host: "localhost",
   user: "root",
   password: "",
-  database: "smdss db"
+  database: "smdss_db (2)"
 });
 
 db.connect((err) => {
@@ -133,20 +133,11 @@ app.post("/api/login", (req, res) => {
       return res.status(401).json({ error: "Invalid password" });
     }
 
-    // Check the role and respond accordingly
-      if (user.role_id === 1) {
-      return res.json({ message: "Login successful", role: "admin" });
-    } else if (user.role_id === 2) {
-      return res.json({
-        message: "Login successful",
-        role: "citizen",
-        citizen_id: user.citizen_id,
-        full_name: user.full_name,
-        email: user.email
-      });
-    } else {
-      return res.status(403).json({ error: "Access denied. Unknown role." });
-    }
+     // Extract all roles for the user
+    const roles = results.map((row) => row.role_id);
+
+    // Always return roles as an array, even if it contains only one role
+    return res.json({ message: "Login successful", roles });
   });
 });
 
