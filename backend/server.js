@@ -136,8 +136,14 @@ app.post("/api/login", (req, res) => {
      // Extract all roles for the user
     const roles = results.map((row) => row.role_id);
 
-    // Always return roles as an array, even if it contains only one role
-    return res.json({ message: "Login successful", roles });
+    // Return user data along with roles
+    return res.json({ 
+      message: "Login successful", 
+      roles,
+      citizen_id: user.citizen_id,
+      full_name: user.full_name,
+      email: user.email
+    });
   });
 });
 
