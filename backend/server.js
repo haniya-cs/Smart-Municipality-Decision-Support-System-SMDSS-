@@ -20,10 +20,43 @@ const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const bcrypt = require("bcryptjs");
+const multer = require("multer");
+const path = require("path");
+const fs = require("fs");
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Configure multer for image uploads
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const uploadDir = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadDir)) {
+      fs.mkdirSync(uploadDir);
+    }
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, 'complaint-' + uniqueSuffix + path.extname(file.originalname));
+  }
+});
+
+const upload = multer({ 
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+  fileFilter: (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+    if (extname && mimetype) {
+      return cb(null, true);
+    }
+    cb(new Error('Only image files are allowed!'));
+  }
+});
 
 // Endpoint to verify Citizen ID and check role (for citizens only)
 app.post("/api/verify-citizen-id", (req, res) => {
@@ -212,35 +245,102 @@ app.get("/api/citizens/:citizenId/dues", (req, res) => {
 
 // Submit a new complaint
 app.post("/api/complaints", (req, res) => {
-  const { citizen_id, description, location } = req.body;
+  const { citizen_id, description, location, category_id } = req.body;
+  
   if (!citizen_id || !description) {
     return res.status(400).json({ error: "citizen_id and description are required" });
   }
 
-  // We will try inserting with the string citizen_id first.
-  const insertQuery = `INSERT INTO complaints (citizen_id, description, location, status) VALUES (?, ?, ?, 'Pending')`;
-  db.query(insertQuery, [citizen_id, description, location || null], (err, result) => {
-    if (err) {
-      console.error("Insert error (using string citizen_id):", err.message);
-      
-      // If it failed, maybe citizen_id in the complaints table is actually an INT (foreign key to users.user_id)
-      const getUserQuery = `SELECT user_id FROM users WHERE citizen_id = ?`;
-      db.query(getUserQuery, [citizen_id], (err2, results) => {
-        if (err2 || results.length === 0) return res.status(500).json({ error: "Failed to find user" });
+  // Auto-detect language
+  const language = /[\u0600-\u06FF]/.test(description) ? 'ar' : 'en';
+  const finalCategoryId = category_id || 7;
+
+  // First, get the user_id from the citizen_id string
+  const getUserQuery = `SELECT user_id FROM users WHERE citizen_id = ?`;
+  db.query(getUserQuery, [citizen_id], (err, results) => {
+    if (err || results.length === 0) {
+      console.error("User not found:", err);
+      return res.status(500).json({ error: "Citizen not found" });
+    }
+
+    const userId = results[0].user_id;
+
+    // Now insert with the numeric user_id
+    const insertQuery = `
+      INSERT INTO complaints (citizen_id, category_id, description, language, status, location) 
+      VALUES (?, ?, ?, ?, 'Pending', ?)
+    `;
+    
+    db.query(insertQuery, [userId, finalCategoryId, description, language, location || null], 
+      (err2, result) => {
+        if (err2) {
+          console.error("Insert error:", err2.message);
+          return res.status(500).json({ error: err2.message });
+        }
         
-        const user_id = results[0].user_id;
-        db.query(insertQuery, [user_id, description, location || null], (err3, result3) => {
-          if (err3) {
-            console.error("Insert error (using int user_id):", err3.message);
-            // Send the EXACT error message to the frontend so we know why it failed!
-            return res.status(500).json({ error: err3.message || err.message });
-          }
-          return res.json({ message: "Complaint submitted successfully", complaint_id: result3.insertId });
+        res.json({ 
+          message: "Complaint submitted successfully", 
+          complaint_id: result.insertId,
+          language: language,
+          status: 'Pending'
         });
       });
-    } else {
-      res.json({ message: "Complaint submitted successfully", complaint_id: result.insertId });
+  });
+});
+
+//get gategory
+app.get("/api/categories", (req, res) => {
+  db.query("SELECT * FROM categories", (err, results) => {
+    if (err) return res.status(500).json({ error: "Database error" });
+    res.json({ categories: results });
+  });
+});
+
+// Upload complaint image
+app.post("/api/complaints/:complaintId/images", upload.single('image'), (req, res) => {
+  const { complaintId } = req.params;
+  
+  console.log("Image upload request - complaintId:", complaintId);
+  console.log("Uploaded file:", req.file);
+  
+  if (!req.file) {
+    return res.status(400).json({ error: "No image uploaded" });
+  }
+
+  // Store the URL path to the image
+  const imageUrl = `/uploads/${req.file.filename}`;
+  
+  const insertQuery = `
+    INSERT INTO complaint_images (complaint_id, url) 
+    VALUES (?, ?)
+  `;
+  
+  db.query(insertQuery, [complaintId, imageUrl], (err, result) => {
+    if (err) {
+      console.error("Image insert error:", err.message);
+      console.error("Error code:", err.code);
+      return res.status(500).json({ error: err.message });
     }
+    
+    res.json({ 
+      message: "Image uploaded successfully", 
+      image_id: result.insertId,
+      url: imageUrl
+    });
+  });
+});
+
+// Get complaint images
+app.get("/api/complaints/:complaintId/images", (req, res) => {
+  const { complaintId } = req.params;
+  
+  const query = `SELECT * FROM complaint_images WHERE complaint_id = ?`;
+  db.query(query, [complaintId], (err, results) => {
+    if (err) {
+      console.error("Database error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json({ images: results });
   });
 });
 
