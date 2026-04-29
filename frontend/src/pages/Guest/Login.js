@@ -30,6 +30,17 @@ const Login = () => {
       const data = await response.json();
 
       if (response.ok) {
+        // Save session data to localStorage
+        localStorage.setItem(
+          'smdss_session',
+          JSON.stringify({
+            role: data.roles[0] === 1 ? 'admin' : 'citizen',
+            citizen_id: data.citizen_id,
+            full_name: data.full_name || '',
+            email: data.email || ''
+          })
+        );
+
         // Check the role and navigate accordingly
         if (data.roles && data.roles.length > 1) {
           navigate('/role-selection', { state: { roles: data.roles } });
