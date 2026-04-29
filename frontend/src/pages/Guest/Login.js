@@ -30,7 +30,6 @@ const Login = () => {
       const data = await response.json();
 
       if (response.ok) {
-      
         // Check the role and navigate accordingly
         if (data.roles && data.roles.length > 1) {
           navigate('/role-selection', { state: { roles: data.roles } });
