@@ -3,7 +3,7 @@ const db = mysql.createConnection({
   host: "localhost",
   user: "root",
   password: "",
-  database: "smdss_db (2)"
+  database: "smdss_db"
 });
 
 db.connect((err) => {
@@ -240,6 +240,35 @@ app.get("/api/citizens/:citizenId/dues", (req, res) => {
     });
 
     return res.json({ properties: Array.from(propertiesMap.values()) });
+  });
+});
+
+// Pay a single due
+app.put("/api/dues/:dueId/pay", (req, res) => {
+  const { dueId } = req.params;
+  const query = "UPDATE dues SET status = 'paid', payment_method = 'Credit Card' WHERE due_id = ?";
+  db.query(query, [dueId], (err, result) => {
+    if (err) {
+      console.error("Error paying due:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Due not found" });
+    }
+    res.json({ message: "Payment successful" });
+  });
+});
+
+// Pay all dues for a property
+app.put("/api/properties/:propertyId/pay-all", (req, res) => {
+  const { propertyId } = req.params;
+  const query = "UPDATE dues SET status = 'paid', payment_method = 'Credit Card' WHERE property_id = ? AND status = 'unpaid'";
+  db.query(query, [propertyId], (err, result) => {
+    if (err) {
+      console.error("Error paying property dues:", err);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+    res.json({ message: "All outstanding dues paid successfully", updated: result.affectedRows });
   });
 });
 

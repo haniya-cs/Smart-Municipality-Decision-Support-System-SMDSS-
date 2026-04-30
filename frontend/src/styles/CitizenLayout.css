@@ -171,10 +171,22 @@
   margin-left: 260px; /* Offset for sidebar */
   padding: 2rem 3rem;
   box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.citizen-main-content .container {
+  max-width: 100%;
+  padding: 0;
 }
 
 .top-padding-bar {
   height: 1rem;
+}
+
+@media (max-width: 1200px) {
+  .citizen-main-content {
+    padding: 1.5rem;
+  }
 }
 
 /* Citizen Dashboard Specific Styles */

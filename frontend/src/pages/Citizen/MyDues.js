@@ -63,6 +63,49 @@ const MyDues = () => {
       .reduce((sum, d) => sum + Number(d.amount), 0)
       .toFixed(2);
 
+  const handlePayDue = async (dueId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/dues/${dueId}/pay`, { method: 'PUT' });
+      if (response.ok) {
+        // Update local state to reflect the paid status
+        setProperties(prev => prev.map(property => ({
+          ...property,
+          dues: property.dues.map(due => due.due_id === dueId ? { ...due, status: 'paid' } : due)
+        })));
+        alert('Payment successful!');
+      } else {
+        alert('Failed to process payment.');
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert('An error occurred during payment.');
+    }
+  };
+
+  const handlePayTotal = async (propertyId) => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/properties/${propertyId}/pay-all`, { method: 'PUT' });
+      if (response.ok) {
+        // Update all unpaid dues for this property to paid
+        setProperties(prev => prev.map(property => {
+          if (property.property_id === propertyId) {
+            return {
+              ...property,
+              dues: property.dues.map(due => ({ ...due, status: 'paid' }))
+            };
+          }
+          return property;
+        }));
+        alert('All outstanding dues for this property have been paid!');
+      } else {
+        alert('Failed to process total payment.');
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      alert('An error occurred during total payment.');
+    }
+  };
+
   return (
     <div className="container fade-in">
       <div className="flex justify-between items-center mb-8">
@@ -116,7 +159,7 @@ const MyDues = () => {
                     </h3>
                   </div>
                   {totalUnpaid > 0 && (
-                    <button className="btn btn-primary">
+                    <button className="btn btn-primary" onClick={() => handlePayTotal(property.property_id)}>
                       <CreditCard size={18} /> Pay Total
                     </button>
                   )}
@@ -163,7 +206,13 @@ const MyDues = () => {
                       </td>
                       <td className="text-right">
                         {due.status === 'unpaid' ? (
-                          <button className="btn btn-outline invoice-pay-btn" style={{ borderColor: 'var(--primary-color)', color: 'var(--primary-color)' }}>Pay</button>
+                          <button 
+                            className="btn btn-outline invoice-pay-btn" 
+                            style={{ borderColor: 'var(--primary-color)', color: 'var(--primary-color)' }}
+                            onClick={() => handlePayDue(due.due_id)}
+                          >
+                            Pay
+                          </button>
                         ) : (
                           <button className="btn invoice-download-btn">
                             <Download size={16} /> Receipt

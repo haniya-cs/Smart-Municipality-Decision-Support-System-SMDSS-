@@ -11,12 +11,17 @@ import '../../styles/CitizenDashboard.css';
  * MOCK STATS HELPER
  * Used to define the configuration of the statistics cards.
  */
-const getStatsConfig = (stats, unpaidTotal) => [
-  { id: 's-1', title: 'Pending Complaints', value: stats.pending, type: 'warning', icon: Clock },
-  { id: 's-2', title: 'In Progress', value: stats.inProgress, type: 'info', icon: AlertCircle },
-  { id: 's-3', title: 'Resolved', value: stats.resolved, type: 'success', icon: CheckCircle2 },
-  { id: 's-4', title: 'Unpaid Dues', value: `$${unpaidTotal}`, type: 'danger', icon: CreditCard }
-];
+const getStatsConfig = (stats, unpaidTotal, hasProperties) => {
+  const configs = [
+    { id: 's-1', title: 'Pending Complaints', value: stats.pending, type: 'warning', icon: Clock },
+    { id: 's-2', title: 'In Progress', value: stats.inProgress, type: 'info', icon: AlertCircle },
+    { id: 's-3', title: 'Resolved', value: stats.resolved, type: 'success', icon: CheckCircle2 }
+  ];
+  if (hasProperties) {
+    configs.push({ id: 's-4', title: 'Unpaid Dues', value: `$${unpaidTotal}`, type: 'danger', icon: CreditCard });
+  }
+  return configs;
+};
 
 /**
  * SUB-COMPONENTS
@@ -132,7 +137,7 @@ const Dashboard = () => {
     });
   }, [citizenId]);
 
-  const statsConfig = getStatsConfig(complaintsStats, unpaidTotal);
+  const statsConfig = getStatsConfig(complaintsStats, unpaidTotal, hasProperties);
 
   if (isLoading) return <div className="container fade-in" style={{ textAlign: 'center', padding: '5rem' }}>Loading your dashboard...</div>;
 
@@ -140,12 +145,12 @@ const Dashboard = () => {
     <div className="container fade-in">
       
       {/* Header */}
-      <header className="flex justify-between items-center mb-6">
+      <header className="flex justify-between items-center mb-6 citizen-dashboard-header">
         <div className="citizen-welcome" style={{ marginBottom: 0 }}>
           <h1>Welcome back, {firstName}</h1>
           <p>Here's an overview of your municipal services and activities.</p>
         </div>
-        <Link to="/citizen/complaint" className="btn btn-primary" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+        <Link to="/citizen/complaint" className="btn btn-primary citizen-dashboard-cta">
           <PlusCircle size={18} /> New Complaint
         </Link>
       </header>
@@ -182,38 +187,36 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Outstanding Dues Panel */}
-        <div className="dashboard-panel" style={{ display: 'flex', flexDirection: 'column' }}>
-          <div className="panel-header-row mb-4">
-            <h3 className="panel-title"><Wallet size={18} /> Outstanding Dues</h3>
-            <Link to="/citizen/dues" className="panel-link">View All <ArrowRight size={16} /></Link>
-          </div>
+        {/* Outstanding Dues Panel - ONLY IF HAS PROPERTIES */}
+        {hasProperties && (
+          <div className="dashboard-panel" style={{ display: 'flex', flexDirection: 'column' }}>
+            <div className="panel-header-row mb-4">
+              <h3 className="panel-title"><Wallet size={18} /> Outstanding Dues</h3>
+              <Link to="/citizen/dues" className="panel-link">View All <ArrowRight size={16} /></Link>
+            </div>
 
-          <div style={{ flex: 1 }}>
-            {!hasProperties ? (
-              <div className="empty-state-container" style={{ borderColor: '#e2e8f0', backgroundColor: '#f8fafc' }}>
-                <Building size={48} color="#cbd5e1" />
-                <p className="empty-state-text" style={{ color: '#64748b' }}>No Properties Found</p>
-                <span style={{ fontSize: '0.85rem', color: '#94a3b8' }}>You don't have any properties registered.</span>
-              </div>
-            ) : recentDues.length > 0 ? (
-              <>
-                {recentDues.map((due, index) => (
-                  <DueItem key={index} due={due} />
-                ))}
-                <button className="btn btn-outline" style={{ width: '100%', marginTop: '1rem', color: '#10b981', borderColor: '#10b981' }}>
-                  Proceed to Payment
-                </button>
-              </>
-            ) : (
-              <div className="empty-state-container" style={{ borderColor: '#86efac', backgroundColor: '#f0fdf4' }}>
-                <CheckCircle2 size={48} color="#10b981" />
-                <p className="empty-state-text" style={{ color: '#15803d' }}>All dues are paid!</p>
-                <span style={{ fontSize: '0.85rem', color: '#166534' }}>Thank you for your prompt payments.</span>
-              </div>
-            )}
+            <div style={{ flex: 1 }}>
+              {recentDues.length > 0 ? (
+                <>
+                  {recentDues.map((due, index) => (
+                    <DueItem key={index} due={due} />
+                  ))}
+                  <Link to="/citizen/dues" style={{ textDecoration: 'none' }}>
+                    <button className="btn btn-outline" style={{ width: '100%', marginTop: '1rem', color: '#10b981', borderColor: '#10b981' }}>
+                      Proceed to Payment
+                    </button>
+                  </Link>
+                </>
+              ) : (
+                <div className="empty-state-container" style={{ borderColor: '#86efac', backgroundColor: '#f0fdf4' }}>
+                  <CheckCircle2 size={48} color="#10b981" />
+                  <p className="empty-state-text" style={{ color: '#15803d' }}>All dues are paid!</p>
+                  <span style={{ fontSize: '0.85rem', color: '#166534' }}>Thank you for your prompt payments.</span>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
       </section>
     </div>

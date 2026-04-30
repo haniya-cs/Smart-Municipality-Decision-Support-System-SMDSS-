@@ -12,7 +12,20 @@ const CitizenLayout = () => {
     navigate('/');
   };
 
+  const [hasProperties, setHasProperties] = React.useState(false);
+
   const session = JSON.parse(localStorage.getItem('smdss_session') || '{}');
+
+  React.useEffect(() => {
+    if (session.citizen_id) {
+      fetch(`http://localhost:5000/api/citizens/${session.citizen_id}/dues`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.properties) setHasProperties(data.properties.length > 0);
+        })
+        .catch(err => console.error("Error fetching dues for layout:", err));
+    }
+  }, [session.citizen_id]);
 
   return (
     <div className="citizen-layout">
@@ -51,10 +64,12 @@ const CitizenLayout = () => {
             My Complaints
           </NavLink>
 
-          <NavLink to="/citizen/dues" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
-            <CreditCard size={18} />
-            My Dues
-          </NavLink>
+          {hasProperties && (
+            <NavLink to="/citizen/dues" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+              <CreditCard size={18} />
+              My Dues
+            </NavLink>
+          )}
         </nav>
 
         <div className="sidebar-footer">
