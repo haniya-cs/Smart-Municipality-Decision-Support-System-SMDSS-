@@ -7,17 +7,35 @@ const SubmitComplaint = () => {
   const [description, setDescription] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [location, setLocation] = useState('');
+  const [locationError, setLocationError] = useState('');
   const [categoryId, setCategoryId] = useState('7');
   const [selectedImage, setSelectedImage] = useState(null);
   const navigate = useNavigate();
+
+  // Detect language: returns 'ar' for Arabic, 'en' for English
+  const detectLanguage = (text) => {
+    const arabicPattern = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF]+/;
+    return arabicPattern.test(text) ? 'ar' : 'en';
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
+    // Validate location
+    if (!location.trim()) {
+      setLocationError('Location is required');
+      setIsSubmitting(false);
+      return;
+    }
+    setLocationError('');
+
     // Get citizen_id from session
     const session = JSON.parse(localStorage.getItem('smdss_session') || '{}');
     const citizenId = session.citizen_id || 'LB-1004'; // Default for testing if not found
+
+    // Detect language from description
+    const language = detectLanguage(description);
 
     try {
       // First, submit the complaint
@@ -28,7 +46,8 @@ const SubmitComplaint = () => {
           citizen_id: citizenId,
           description: description,
           location: location,
-          category_id: parseInt(categoryId)
+          category_id: parseInt(categoryId),
+          language: language
         })
       });
 
@@ -111,8 +130,18 @@ const SubmitComplaint = () => {
                   <div className="input-icon">
                     <MapPin size={18} color="var(--text-muted)" />
                   </div>
-                  <input type="text" className="form-control input-with-icon" placeholder="Street name or landmark..." value={location} onChange={(e) => setLocation(e.target.value)} />
+                  <input 
+                    type="text" 
+                    className={`form-control input-with-icon ${locationError ? 'input-error' : ''}`} 
+                    placeholder="Street name or landmark..." 
+                    value={location} 
+                    onChange={(e) => {
+                      setLocation(e.target.value);
+                      if (e.target.value.trim()) setLocationError('');
+                    }} 
+                  />
                 </div>
+                {locationError && <small className="text-danger">{locationError}</small>}
               </div>
               
              <div className="form-group form-group-nomargin">
