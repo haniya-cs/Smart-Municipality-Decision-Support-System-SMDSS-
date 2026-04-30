@@ -245,14 +245,14 @@ app.get("/api/citizens/:citizenId/dues", (req, res) => {
 
 // Submit a new complaint
 app.post("/api/complaints", (req, res) => {
-  const { citizen_id, description, location, category_id } = req.body;
+  const { citizen_id, description, location, category_id, language: providedLanguage } = req.body;
   
   if (!citizen_id || !description) {
     return res.status(400).json({ error: "citizen_id and description are required" });
   }
 
-  // Auto-detect language
-  const language = /[\u0600-\u06FF]/.test(description) ? 'ar' : 'en';
+  // Use language from frontend if provided, otherwise auto-detect
+  const language = providedLanguage || (/[\u0600-\u06FF]/.test(description) ? 'ar' : 'en');
   const finalCategoryId = category_id || 7;
 
   // First, get the user_id from the citizen_id string
