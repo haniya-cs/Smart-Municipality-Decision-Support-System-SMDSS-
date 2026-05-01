@@ -1,23 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  AlertTriangle, Users, Map, Zap, CheckCircle2, 
-  FileText, Activity, Bell, Shield 
+import {
+  AlertTriangle, Users, Map, Zap, CheckCircle2,
+  Activity, Shield
 } from 'lucide-react';
 import '../../styles/Dashboard.css';
 import '../../styles/CitizenLayout.css'; 
 import '../../styles/AdminDashboard.css';
 
-/**
- * MOCK DATA
- * Represents the structure expected from the backend API.
- * Defines statistics, complaint clusters, and recent system activities.
- */
-const SYSTEM_STATS = [
-  { id: 'stat-1', title: 'High Priority', value: '12', trend: '↑ 3 since yesterday', type: 'danger', icon: AlertTriangle },
-  { id: 'stat-2', title: 'Pending Issues', value: '48', trend: '15 waiting for review', type: 'warning', icon: Map },
-  { id: 'stat-3', title: 'Dues Collected', value: '$45.2K', trend: '↑ +12% this month', type: 'success', icon: CheckCircle2 },
-  { id: 'stat-4', title: 'Registered Citizens', value: '1,204', trend: '8 new today', type: 'info', icon: Users }
-];
+const formatCurrencyCompact = (amount) =>
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+    notation: 'compact',
+    maximumFractionDigits: 1
+  }).format(Number(amount || 0));
 
 const COMPLAINT_CLUSTERS = [
   { id: 'c-1', title: 'Main water pipe explosion', category: 'Infrastructure', count: 15, priority: 'CRITICAL', status: 'Pending', type: 'danger' },
@@ -25,12 +21,21 @@ const COMPLAINT_CLUSTERS = [
   { id: 'c-3', title: 'Streetlight out', category: 'Electricity', count: 1, priority: 'LOW', status: 'Pending', type: 'info' }
 ];
 
-const RECENT_ACTIVITIES = [
-  { id: 'a-1', user: 'LB-1004', action: 'submitted a new complaint.', time: 'Just now', icon: AlertTriangle, colorClass: 'blue' },
-  { id: 'a-2', user: 'LB-2041', action: 'paid $45.00 dues.', time: '15 mins ago', icon: CheckCircle2, colorClass: 'green' },
-  { id: 'a-3', user: 'System', action: 'New citizen registration pending review.', time: '2 hours ago', icon: Users, colorClass: 'yellow' },
-  { id: 'a-4', user: 'System', action: 'Automated backup completed.', time: 'Yesterday', icon: Shield, colorClass: 'gray' }
-];
+const getRelativeTime = (inputDate) => {
+  const time = new Date(inputDate).getTime();
+  if (Number.isNaN(time)) return 'Just now';
+  const diffSec = Math.floor((Date.now() - time) / 1000);
+  if (diffSec < 60) return 'Just now';
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)} mins ago`;
+  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)} hours ago`;
+  return `${Math.floor(diffSec / 86400)} days ago`;
+};
+
+const activityTypeMeta = {
+  complaint_submitted: { icon: AlertTriangle, colorClass: 'blue' },
+  citizen_registered: { icon: Users, colorClass: 'yellow' },
+  complaint_status_changed: { icon: CheckCircle2, colorClass: 'green' }
+};
 
 /**
  * SUB-COMPONENTS
@@ -101,6 +106,90 @@ const ActivityItem = ({ activity }) => {
  */
 const AdminDashboard = () => {
   const [chartData] = useState([40, 60, 45, 80, 50, 90, 75]); // Mock weekly resolution data
+  const [stats, setStats] = useState({
+    high_priority: 0,
+    pending_issues: 0,
+    dues_collected: 0,
+    registered_citizens: 0
+  });
+  const [isLoadingStats, setIsLoadingStats] = useState(true);
+  const [activities, setActivities] = useState([]);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/admin/dashboard-stats');
+        if (!response.ok) throw new Error('Failed to fetch dashboard stats');
+        const data = await response.json();
+        setStats({
+          high_priority: Number(data.high_priority || 0),
+          pending_issues: Number(data.pending_issues || 0),
+          dues_collected: Number(data.dues_collected || 0),
+          registered_citizens: Number(data.registered_citizens || 0)
+        });
+      } catch (err) {
+        console.error('Dashboard stats fetch error:', err);
+      } finally {
+        setIsLoadingStats(false);
+      }
+    };
+
+    fetchStats();
+  }, []);
+
+  useEffect(() => {
+    let intervalId;
+
+    const fetchActivities = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/admin/live-activities?limit=12');
+        if (!response.ok) throw new Error('Failed to fetch live activities');
+        const data = await response.json();
+        setActivities(Array.isArray(data.activities) ? data.activities : []);
+      } catch (error) {
+        console.error('Live activities fetch error:', error);
+      }
+    };
+
+    fetchActivities();
+    intervalId = setInterval(fetchActivities, 10000);
+    return () => clearInterval(intervalId);
+  }, []);
+
+  const systemStats = [
+    {
+      id: 'stat-1',
+      title: 'High Priority',
+      value: isLoadingStats ? '...' : stats.high_priority.toLocaleString(),
+      trend: `${stats.high_priority} unresolved high-priority complaints`,
+      type: 'danger',
+      icon: AlertTriangle
+    },
+    {
+      id: 'stat-2',
+      title: 'Pending Issues',
+      value: isLoadingStats ? '...' : stats.pending_issues.toLocaleString(),
+      trend: `${stats.pending_issues} waiting for review`,
+      type: 'warning',
+      icon: Map
+    },
+    {
+      id: 'stat-3',
+      title: 'Dues Collected',
+      value: isLoadingStats ? '...' : formatCurrencyCompact(stats.dues_collected),
+      trend: 'Total paid dues so far',
+      type: 'success',
+      icon: CheckCircle2
+    },
+    {
+      id: 'stat-4',
+      title: 'Registered Citizens',
+      value: isLoadingStats ? '...' : stats.registered_citizens.toLocaleString(),
+      trend: 'Total active citizens in system',
+      type: 'info',
+      icon: Users
+    }
+  ];
 
   return (
     <div className="container fade-in">
@@ -110,19 +199,11 @@ const AdminDashboard = () => {
           <h1>Central Admin Dashboard</h1>
           <p>Overview of municipality health and AI-prioritized tasks.</p>
         </div>
-        <div className="admin-quick-actions">
-          <button className="btn btn-outline admin-action-btn">
-            <FileText size={16} /> Export Report
-          </button>
-          <button className="btn btn-primary admin-action-btn">
-            <Bell size={16} /> Broadcast Alert
-          </button>
-        </div>
       </header>
 
       {/* Statistics Grid */}
       <section className="dashboard-stats-grid mb-8">
-        {SYSTEM_STATS.map(stat => (
+        {systemStats.map(stat => (
           <StatCard key={stat.id} stat={stat} />
         ))}
       </section>
@@ -185,9 +266,30 @@ const AdminDashboard = () => {
               <Activity size={18} /> Live Activity Feed
             </h3>
             <div className="activity-feed-list">
-              {RECENT_ACTIVITIES.map(activity => (
-                <ActivityItem key={activity.id} activity={activity} />
-              ))}
+              {activities.length === 0 ? (
+                <div className="activity-item">
+                  <div className="activity-icon-wrapper gray">
+                    <Shield size={16} />
+                  </div>
+                  <div>
+                    <p className="activity-text">No activity yet.</p>
+                    <span className="activity-time">Waiting for updates...</span>
+                  </div>
+                </div>
+              ) : (
+                activities.map((item) => {
+                  const meta = activityTypeMeta[item.activity_type] || { icon: Activity, colorClass: 'gray' };
+                  const activity = {
+                    id: item.activity_id,
+                    user: item.actor_citizen_id || 'System',
+                    action: item.action_text,
+                    time: getRelativeTime(item.created_at),
+                    icon: meta.icon,
+                    colorClass: meta.colorClass
+                  };
+                  return <ActivityItem key={activity.id} activity={activity} />;
+                })
+              )}
             </div>
             <button className="btn btn-outline full-log-btn">View Full Audit Log</button>
           </div>

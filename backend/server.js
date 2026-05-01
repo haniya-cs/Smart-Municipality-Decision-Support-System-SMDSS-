@@ -23,11 +23,59 @@ const bcrypt = require("bcryptjs");
 const multer = require("multer");
 const path = require("path");
 const fs = require("fs");
+const { analyzeComplaint, detectDuplicateComplaint } = require("./ai");
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+const queryAsync = (sql, values = []) =>
+  new Promise((resolve, reject) => {
+    db.query(sql, values, (err, results) => {
+      if (err) return reject(err);
+      resolve(results);
+    });
+  });
+
+const initializeActivityTable = async () => {
+  try {
+    await queryAsync(`
+      CREATE TABLE IF NOT EXISTS system_activities (
+        activity_id INT AUTO_INCREMENT PRIMARY KEY,
+        actor_citizen_id VARCHAR(50) NULL,
+        activity_type VARCHAR(50) NOT NULL,
+        action_text VARCHAR(255) NOT NULL,
+        reference_id INT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+  } catch (error) {
+    console.error("Failed to initialize system_activities table:", error);
+  }
+};
+
+const logSystemActivity = async ({
+  actorCitizenId = null,
+  activityType,
+  actionText,
+  referenceId = null
+}) => {
+  if (!activityType || !actionText) return;
+  try {
+    await queryAsync(
+      `
+      INSERT INTO system_activities (actor_citizen_id, activity_type, action_text, reference_id)
+      VALUES (?, ?, ?, ?)
+      `,
+      [actorCitizenId, activityType, actionText, referenceId]
+    );
+  } catch (error) {
+    console.error("Failed to log system activity:", error);
+  }
+};
+
+initializeActivityTable();
 
 // Configure multer for image uploads
 const storage = multer.diskStorage({
@@ -113,13 +161,19 @@ app.post("/api/complete-registration", async (req, res) => {
       JOIN user_roles ur ON u.user_id = ur.user_id
       WHERE u.citizen_id = ?
     `;
-    db.query(roleQuery, [citizen_id], (err, roleResults) => {
+    db.query(roleQuery, [citizen_id], async (err, roleResults) => {
       if (err) {
         console.error("Role fetch error:", err);
         return res.status(500).json({ error: "Internal server error" });
       }
 
       const role_id = roleResults[0]?.role_id || null;
+      await logSystemActivity({
+        actorCitizenId: citizen_id,
+        activityType: "citizen_registered",
+        actionText: "completed citizen registration"
+      });
+
       res.json({
         message: "Registration completed successfully",
         role_id,
@@ -173,6 +227,7 @@ app.post("/api/login", (req, res) => {
     return res.json({ 
       message: "Login successful", 
       roles,
+      user_id: user.user_id,
       citizen_id: user.citizen_id,
       full_name: user.full_name,
       email: user.email
@@ -273,7 +328,7 @@ app.put("/api/properties/:propertyId/pay-all", (req, res) => {
 });
 
 // Submit a new complaint
-app.post("/api/complaints", (req, res) => {
+app.post("/api/complaints", async (req, res) => {
   const { citizen_id, description, location, category_id, language: providedLanguage } = req.body;
   
   if (!citizen_id || !description) {
@@ -284,37 +339,95 @@ app.post("/api/complaints", (req, res) => {
   const language = providedLanguage || (/[\u0600-\u06FF]/.test(description) ? 'ar' : 'en');
   const finalCategoryId = category_id || 7;
 
-  // First, get the user_id from the citizen_id string
-  const getUserQuery = `SELECT user_id FROM users WHERE citizen_id = ?`;
-  db.query(getUserQuery, [citizen_id], (err, results) => {
-    if (err || results.length === 0) {
-      console.error("User not found:", err);
-      return res.status(500).json({ error: "Citizen not found" });
+  try {
+    // 1. Run AI Analysis
+    let aiResult;
+    try {
+      aiResult = await analyzeComplaint(description);
+    } catch (error) {
+      console.error("Failed to run AI:", error);
+      aiResult = { priority: "Medium", summary: "AI Analysis Failed", category: "Other" };
     }
 
-    const userId = results[0].user_id;
+    // 2. Find citizen user_id
+    const users = await queryAsync(`SELECT user_id FROM users WHERE citizen_id = ? LIMIT 1`, [citizen_id]);
+    if (!users.length) {
+      return res.status(404).json({ error: "Citizen not found" });
+    }
+    const userId = users[0].user_id;
 
-    // Now insert with the numeric user_id
-    const insertQuery = `
-      INSERT INTO complaints (citizen_id, category_id, description, language, status, location) 
-      VALUES (?, ?, ?, ?, 'Pending', ?)
+    // 3. Get candidate previous complaints for duplicate detection
+    const candidateRows = await queryAsync(
+      `
+      SELECT
+        c.complaint_id AS complaintId,
+        c.description,
+        c.location,
+        c.category_id AS categoryId,
+        a.analysis_id AS analysisId,
+        a.summary
+      FROM complaints c
+      JOIN ai_analysis a ON c.analysis_id = a.analysis_id
+      WHERE c.category_id = ?
+      ORDER BY c.complaint_id DESC
+      LIMIT 20
+      `,
+      [finalCategoryId]
+    );
+
+    const duplicateResult = await detectDuplicateComplaint(description, candidateRows);
+
+    // 4. Insert into ai_analysis including duplicate metadata
+    const insertAnalysisQuery = `
+      INSERT INTO ai_analysis (priority_level, summary, suggested_category, duplicate_of_id, similarity_score)
+      VALUES (?, ?, ?, ?, ?)
     `;
-    
-    db.query(insertQuery, [userId, finalCategoryId, description, language, location || null], 
-      (err2, result) => {
-        if (err2) {
-          console.error("Insert error:", err2.message);
-          return res.status(500).json({ error: err2.message });
-        }
-        
-        res.json({ 
-          message: "Complaint submitted successfully", 
-          complaint_id: result.insertId,
-          language: language,
-          status: 'Pending'
-        });
-      });
-  });
+    const aiRes = await queryAsync(insertAnalysisQuery, [
+      aiResult.priority,
+      aiResult.summary,
+      aiResult.category,
+      duplicateResult.duplicateOfId,
+      duplicateResult.similarityScore
+    ]);
+
+    const analysisId = aiRes.insertId;
+
+    // 5. Insert complaint linked to analysis
+    const insertQuery = `
+      INSERT INTO complaints (citizen_id, category_id, analysis_id, description, language, status, location) 
+      VALUES (?, ?, ?, ?, ?, 'Pending', ?)
+    `;
+    const complaintInsertResult = await queryAsync(insertQuery, [
+      userId,
+      finalCategoryId,
+      analysisId,
+      description,
+      language,
+      location || null
+    ]);
+
+    await logSystemActivity({
+      actorCitizenId: citizen_id,
+      activityType: "complaint_submitted",
+      actionText: "submitted a new complaint",
+      referenceId: complaintInsertResult.insertId
+    });
+
+    res.json({
+      message: "Complaint submitted successfully with AI Analysis",
+      complaint_id: complaintInsertResult.insertId,
+      ai_analysis: {
+        ...aiResult,
+        duplicate_of_id: duplicateResult.duplicateOfId,
+        similarity_score: duplicateResult.similarityScore
+      },
+      language,
+      status: "Pending"
+    });
+  } catch (error) {
+    console.error("Submit complaint flow error:", error);
+    return res.status(500).json({ error: "Failed to submit complaint with AI analysis" });
+  }
 });
 
 //get gategory
@@ -421,6 +534,163 @@ app.get("/api/admin/citizens", (req, res) => {
     }
     res.json({ citizens: results });
   });
+});
+
+// Admin: Dashboard cards statistics
+app.get("/api/admin/dashboard-stats", async (req, res) => {
+  try {
+    const [highPriorityRows, pendingRows, duesRows, citizensRows] = await Promise.all([
+      queryAsync(
+        `
+        SELECT COUNT(*) AS total
+        FROM complaints c
+        JOIN ai_analysis a ON c.analysis_id = a.analysis_id
+        WHERE a.priority_level = 'High'
+          AND c.status <> 'Resolved'
+        `
+      ),
+      queryAsync(`SELECT COUNT(*) AS total FROM complaints WHERE status = 'Pending'`),
+      queryAsync(`SELECT COALESCE(SUM(amount), 0) AS total FROM dues WHERE status = 'paid'`),
+      queryAsync(
+        `
+        SELECT COUNT(*) AS total
+        FROM users u
+        JOIN user_roles ur ON u.user_id = ur.user_id
+        WHERE ur.role_id = 2
+        `
+      )
+    ]);
+
+    return res.json({
+      high_priority: Number(highPriorityRows[0]?.total || 0),
+      pending_issues: Number(pendingRows[0]?.total || 0),
+      dues_collected: Number(duesRows[0]?.total || 0),
+      registered_citizens: Number(citizensRows[0]?.total || 0)
+    });
+  } catch (error) {
+    console.error("Dashboard stats error:", error);
+    return res.status(500).json({ error: "Failed to load dashboard stats" });
+  }
+});
+
+// Admin: Live activity feed
+app.get("/api/admin/live-activities", async (req, res) => {
+  const limit = Math.min(Math.max(Number(req.query.limit) || 12, 1), 50);
+  try {
+    const rows = await queryAsync(
+      `
+      SELECT activity_id, actor_citizen_id, activity_type, action_text, reference_id, created_at
+      FROM system_activities
+      ORDER BY created_at DESC, activity_id DESC
+      LIMIT ?
+      `,
+      [limit]
+    );
+
+    return res.json({ activities: rows });
+  } catch (error) {
+    console.error("Live activities fetch error:", error);
+    return res.status(500).json({ error: "Failed to load live activities" });
+  }
+});
+
+// Admin: Get all complaints
+app.get("/api/admin/complaints", (req, res) => {
+  const query = `
+    SELECT c.*, u.full_name, u.citizen_id as user_citizen_id, cat.name as category_name
+    FROM complaints c
+    LEFT JOIN users u ON c.citizen_id = u.user_id OR c.citizen_id = u.citizen_id
+    LEFT JOIN categories cat ON c.category_id = cat.category_id
+    ORDER BY c.created_at DESC, c.complaint_id DESC
+  `;
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("Database error fetching all complaints:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    
+    // Remove duplicate matches from the OR join condition by grouping by complaint_id
+    const uniqueComplaints = [];
+    const seenIds = new Set();
+    results.forEach(row => {
+      if (!seenIds.has(row.complaint_id)) {
+        seenIds.add(row.complaint_id);
+        uniqueComplaints.push(row);
+      }
+    });
+
+    res.json({ complaints: uniqueComplaints });
+  });
+});
+
+// Admin: Update complaint status and write history log
+app.put("/api/admin/complaints/:id/status", async (req, res) => {
+  const { id } = req.params;
+  const { status, updated_by = null } = req.body;
+  if (!status) return res.status(400).json({ error: "Status is required" });
+
+  try {
+    const currentRows = await queryAsync(
+      "SELECT status FROM complaints WHERE complaint_id = ? LIMIT 1",
+      [id]
+    );
+
+    if (!currentRows.length) {
+      return res.status(404).json({ error: "Complaint not found" });
+    }
+
+    const previousStatus = currentRows[0].status;
+
+    // If status did not change, avoid writing duplicate history logs.
+    if (previousStatus === status) {
+      return res.json({ message: "Status already set", complaint_id: Number(id), status });
+    }
+
+    await queryAsync("START TRANSACTION");
+
+    await queryAsync(
+      "UPDATE complaints SET status = ? WHERE complaint_id = ?",
+      [status, id]
+    );
+
+    const updateText = `Status changed from ${previousStatus} to ${status}`;
+    await queryAsync(
+      `
+      INSERT INTO complaint_updates (complaint_id, status, update_text, updated_by)
+      VALUES (?, ?, ?, ?)
+      `,
+      [id, status, updateText, updated_by]
+    );
+
+    let adminCitizenId = null;
+    if (updated_by) {
+      const adminRows = await queryAsync(
+        "SELECT citizen_id FROM users WHERE user_id = ? LIMIT 1",
+        [updated_by]
+      );
+      adminCitizenId = adminRows[0]?.citizen_id || null;
+    }
+
+    await logSystemActivity({
+      actorCitizenId: adminCitizenId,
+      activityType: "complaint_status_changed",
+      actionText: `changed complaint #${id} status to ${status}`,
+      referenceId: Number(id)
+    });
+
+    await queryAsync("COMMIT");
+
+    res.json({
+      message: "Status updated successfully",
+      complaint_id: Number(id),
+      previous_status: previousStatus,
+      current_status: status
+    });
+  } catch (error) {
+    await queryAsync("ROLLBACK").catch(() => {});
+    console.error("Status update error:", error);
+    return res.status(500).json({ error: "Failed to update complaint status" });
+  }
 });
 
 // Start the server

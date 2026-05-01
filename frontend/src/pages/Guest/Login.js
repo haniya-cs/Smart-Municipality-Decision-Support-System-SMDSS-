@@ -35,6 +35,7 @@ const Login = () => {
           'smdss_session',
           JSON.stringify({
             role: data.roles[0] === 1 ? 'admin' : 'citizen',
+            user_id: data.user_id,
             citizen_id: data.citizen_id,
             full_name: data.full_name || '',
             email: data.email || ''
