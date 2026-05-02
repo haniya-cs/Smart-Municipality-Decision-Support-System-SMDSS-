@@ -21,6 +21,7 @@ import MyDues from './pages/Citizen/MyDues';
 
 // Admin Pages
 import AdminDashboard from './pages/Admin/Dashboard';
+import AdminComplaints from './pages/Admin/Complaints';
 import AdminAnnouncements from './pages/Admin/Announcements';
 import AdminDues from './pages/Admin/Dues';
 import AdminCitizens from './pages/Admin/Citizens';
@@ -64,6 +65,7 @@ function App() {
         {/* Admin Routes with specialized Sidebar layout */}
         <Route path="/admin" element={<AdminLayout />}>
           <Route path="dashboard" element={<AdminDashboard />} />
+          <Route path="complaints" element={<AdminComplaints />} />
           <Route path="announcements" element={<AdminAnnouncements />} />
           <Route path="dues" element={<AdminDues />} />
           <Route path="users" element={<AdminCitizens />} />

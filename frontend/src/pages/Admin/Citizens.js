@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, UserPlus, Eye, Edit, ShieldAlert } from 'lucide-react';
+import { Search, Eye, Edit, ShieldAlert } from 'lucide-react';
 import '../../styles/Dashboard.css';
 
 const AdminCitizens = () => {
@@ -33,10 +33,6 @@ const AdminCitizens = () => {
           <h1>Citizen Directory</h1>
           <p>Manage registered citizens, update profiles, and monitor activity.</p>
         </div>
-        <button className="btn btn-primary" style={{ padding: '0.6rem 1.2rem' }}>
-          <UserPlus size={18} style={{ marginRight: '8px', display: 'inline' }} />
-          Register Citizen
-        </button>
       </div>
 
       <div className="dashboard-panel" style={{ padding: 0, overflow: 'hidden' }}>
