@@ -5,6 +5,8 @@ import '../../styles/Announcements.css';
 const Announcements = () => {
   const [filter, setFilter] = useState('all');
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [announcementsList, setAnnouncementsList] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   // Keeping it updated for real-time expiry testing (optional)
   useEffect(() => {
@@ -12,73 +14,75 @@ const Announcements = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Simulated announcements data with Publish-Start, Publish-End, and Image
-  // Notice the dates are format "YYYY-MM-DD" or similar parseable formats.
-  const announcementsList = [
-    {
-      id: 1,
-      type: 'urgent',
-      title: 'Water Main Break on Hamra Street',
-      content: 'Repair crews are currently on-site. Expected resolution time is 4 hours. Please avoid the area if possible.',
-      publishStart: '2026-04-01T08:00:00',
-      publishEnd: '2026-12-31T23:59:59',
-      image: 'https://images.unsplash.com/photo-1581094288338-2314dddb7ece?auto=format&fit=crop&w=600&q=80',
-      icon: <BellRing size={24} color="var(--danger-color)" />
-    },
-    {
-      id: 2,
-      type: 'urgent',
-      title: 'Storm Warning',
-      content: 'Please ensure all loose outdoor items are secured. Heavy winds expected this evening starting at 8 PM.',
-      publishStart: '2026-04-05T08:00:00',
-      publishEnd: '2026-12-31T23:59:59',
-      image: null,
-      icon: <BellRing size={24} color="var(--danger-color)" />
-    },
-    {
-      id: 3,
-      type: 'general',
-      title: 'Annual Spring Festival',
-      content: 'Join us this weekend at the central park for the Annual Spring Festival. Food trucks, local bands, and activities for kids!',
-      publishStart: '2026-03-01T00:00:00',
-      publishEnd: '2026-10-30T23:59:59',
-      image: 'https://images.unsplash.com/photo-1533174000255-a638c11aa503?auto=format&fit=crop&w=600&q=80',
-      icon: <Calendar size={24} color="var(--success-color)" />
-    },
-    {
-      id: 4,
-      type: 'general',
-      title: 'City Council Public Hearing',
-      content: 'Open meeting regarding the new infrastructure budget. All citizens are invited to attend and voice their opinions.',
-      publishStart: '2026-01-01T00:00:00',
-      publishEnd: '2026-11-20T23:59:59',
-      image: null,
-      icon: <Megaphone size={24} color="var(--primary-color)" />
-    },
-    {
-      id: 5,
-      type: 'general',
-      title: 'Expired Old Announcement',
-      content: 'This announcement has already expired and should not be visible to the user.',
-      publishStart: '2025-01-01T00:00:00',
-      publishEnd: '2025-12-31T23:59:59',
-      image: null,
-      icon: <Info size={24} color="var(--info-color)" />
+  // Fetch announcements from API
+  useEffect(() => {
+    fetchAnnouncements();
+  }, []);
+
+  const fetchAnnouncements = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/announcements/public');
+      const data = await response.json();
+      
+      if (data.announcements && data.announcements.length > 0) {
+        // Transform API data to match the expected format
+        const transformed = data.announcements.map((item, index) => ({
+          id: item.announcement_id,
+          type: item.type,
+          title: item.title,
+          content: item.content,
+          publishStart: item.publish_start,
+          publishEnd: item.publish_end,
+          image: item.image ? `http://localhost:5000${item.image}` : null,
+          icon: getIconForType(item.type),
+          admin_name: item.admin_name
+        }));
+        setAnnouncementsList(transformed);
+      } else {
+        setAnnouncementsList([]);
+      }
+    } catch (error) {
+      console.error('Error fetching announcements:', error);
+      // Fallback to empty array - announcements will show as empty
+      setAnnouncementsList([]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  const getIconForType = (type) => {
+    switch (type) {
+      case 'urgent':
+        return <BellRing size={24} color="var(--danger-color)" />;
+      case 'event':
+        return <Calendar size={24} color="var(--success-color)" />;
+      case 'meeting':
+        return <Megaphone size={24} color="var(--primary-color)" />;
+      case 'maintenance':
+        return <Info size={24} color="var(--info-color)" />;
+      default:
+        return <Megaphone size={24} color="var(--primary-color)" />;
+    }
+  };
 
   const filteredAnnouncements = announcementsList.filter((item) => {
-    // 1. Check if the current time is within publishStart and publishEnd
+
+  if (item.publishStart && item.publishEnd) {
     const start = new Date(item.publishStart);
     const end = new Date(item.publishEnd);
     if (currentTime < start || currentTime > end) {
-      return false; // hide if outside publish window
+      return false;
     }
+  }
 
-    // 2. Apply type filter
-    if (filter === 'all') return true;
-    return item.type === filter;
-  });
+  if (filter === 'all') return true;
+  if (filter === 'urgent') {
+  return item.type?.toLowerCase() === 'urgent';
+}
+  if (filter === 'general') return item.type !== 'urgent';
+
+  return true;
+});
 
   return (
     <div className="container fade-in">

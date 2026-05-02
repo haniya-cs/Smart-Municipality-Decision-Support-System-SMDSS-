@@ -1,9 +1,31 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Shield, BellRing, FileText, Brain, CreditCard, Users } from 'lucide-react';
 import '../../styles/Home.css';
 
 const Home = () => {
+  const [urgentAnnouncements, setUrgentAnnouncements] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchUrgentAnnouncements();
+  }, []);
+
+  const fetchUrgentAnnouncements = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/announcements/urgent');
+      const data = await response.json();
+      
+      if (data.announcements) {
+        setUrgentAnnouncements(data.announcements);
+      }
+    } catch (error) {
+      console.error('Error fetching urgent announcements:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="fade-in">
       <div className="container">
@@ -26,18 +48,19 @@ const Home = () => {
         </div>
 
         {/* Urgent Announcements */}
-        <div className="glass-panel urgent-panel">
-          <div className="flex items-center gap-2 mb-2">
-            <BellRing size={20} color="var(--danger-color)" />
-            <h3 className="urgent-title">Urgent Announcements</h3>
+        {!loading && urgentAnnouncements.length > 0 && (
+          <div className="glass-panel urgent-panel">
+            <div className="flex items-center gap-2 mb-2">
+              <BellRing size={20} color="var(--danger-color)" />
+              <h3 className="urgent-title">Urgent Announcements</h3>
+            </div>
+            {urgentAnnouncements.map((announcement, index) => (
+              <p key={announcement.announcement_id} className={index === urgentAnnouncements.length - 1 ? 'urgent-text-nomargin' : 'urgent-text-margin'}>
+                <strong>{announcement.title}:</strong> {announcement.content}
+              </p>
+            ))}
           </div>
-          <p className="urgent-text-margin">
-            <strong>Water Main Break on Hamra Street:</strong> Repair crews are currently on-site. Expected resolution time is 4 hours.
-          </p>
-          <p className="urgent-text-nomargin">
-            <strong>Storm Warning:</strong> Please ensure all loose outdoor items are secured. Heavy winds expected this evening.
-          </p>
-        </div>
+        )}
 
         {/* Features Grid */}
         <div className="text-center mb-8">
