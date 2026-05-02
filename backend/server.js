@@ -3,7 +3,7 @@ const db = mysql.createConnection({
   host: "localhost",
   user: "root",
   password: "",
-  database: "smdss_db"
+  database: "smdss_db (2)"
 });
 
 db.connect((err) => {
@@ -48,7 +48,7 @@ const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const allowedTypes = /jpeg|jpg|png|gif|jfif|webp/;
     const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = allowedTypes.test(file.mimetype);
     if (extname && mimetype) {
@@ -423,6 +423,209 @@ app.get("/api/admin/citizens", (req, res) => {
   });
 });
 
+// ==================== ANNOUNCEMENTS ENDPOINTS ====================
+
+// Create a new announcement (Admin)
+app.post("/api/announcements", upload.single('image'), (req, res) => {
+  const { admin_id, title, content, type, publish_start, publish_end } = req.body;
+  const allowedTypes = ['urgent','event','general','meeting','maintenance'];
+
+let finalType = (type || 'general').toString().trim().toLowerCase();
+
+if (!allowedTypes.includes(finalType)) {
+  finalType = 'general'; // fallback
+}
+  //const finalType = (type || 'general').toString().trim().toLowerCase();
+  if (!admin_id || !title || !content || !finalType) {
+    return res.status(400).json({ error: "admin_id, title, content, and type are required" });
+  }
+  
+  const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+//
+ const getUserIdQuery = "SELECT user_id FROM users WHERE citizen_id = ?";
+
+  db.query(getUserIdQuery, [admin_id], (err, result) => {
+    if (err) {
+      console.error("User lookup error:", err);
+      return res.status(500).json({ error: err.message });
+    }
+
+    if (result.length === 0) {
+      return res.status(404).json({ error: "User not found" });
+    }
+
+    const userId = result[0].user_id;
+
+  console.log("Final type value:", finalType); // Debugging log
+
+    const query = `
+      INSERT INTO announcements (admin_id, title, content, type, image, publish_start, publish_end) 
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    db.query(query, [userId, title, content, finalType, imageUrl, publish_start || null, publish_end || null], 
+      (err, result) => {
+        if (err) {
+          console.error("Insert announcement error:", err); // Log any errors
+          return res.status(500).json({ error: "Database error", details: err.message });
+        }
+        
+        res.json({ 
+          message: "Announcement published successfully", 
+          announcement_id: result.insertId
+        });
+      }
+    );
+  });
+});
+
+// Get all announcements (for Admin management page)
+app.get("/api/announcements", (req, res) => {
+  const query = `
+    SELECT a.*, u.full_name as admin_name
+    FROM announcements a
+    LEFT JOIN users u ON a.admin_id = u.user_id
+    ORDER BY a.announcement_id DESC
+  `;
+  
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("Database error fetching announcements:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json({ announcements: results });
+  });
+});
+
+// Get urgent announcements only (for Home page)
+app.get("/api/announcements/urgent", (req, res) => {
+  
+  const query = `
+    SELECT a.*, u.full_name as admin_name
+    FROM announcements a
+    LEFT JOIN users u ON a.admin_id = u.user_id
+   WHERE a.type = 'urgent'
+      AND (
+     (a.publish_start IS NULL OR a.publish_start = '' OR a.publish_start <= NOW())
+     AND 
+     (a.publish_end IS NULL OR a.publish_end = '' OR a.publish_end >= NOW())
+     )
+    ORDER BY a.announcement_id DESC
+  `;
+  
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("Database error fetching urgent announcements:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json({ announcements: results });
+  });
+});
+
+// Get public announcements (for Guest/Citizen pages)
+app.get("/api/announcements/public", (req, res) => {
+
+  const query = `
+    SELECT a.*, u.full_name as admin_name
+    FROM announcements a
+    LEFT JOIN users u ON a.admin_id = u.user_id
+    WHERE (
+      (a.publish_start IS NULL OR a.publish_start = '' OR a.publish_start <= NOW())
+      AND 
+      (a.publish_end IS NULL OR a.publish_end = '' OR a.publish_end >= NOW())
+    )
+    ORDER BY 
+      CASE a.type 
+        WHEN 'urgent' THEN 1 
+        WHEN 'maintenance' THEN 2 
+        WHEN 'meeting' THEN 3 
+        WHEN 'event' THEN 4 
+        ELSE 5 
+      END,
+      a.announcement_id DESC
+  `;
+
+  db.query(query, (err, results) => {
+    if (err) {
+      console.error("Database error fetching public announcements:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+    res.json({ announcements: results });
+  });
+});
+
+// Delete an announcement (Admin)
+app.delete("/api/announcements/:announcementId", (req, res) => {
+  const { announcementId } = req.params;
+  
+  const query = "DELETE FROM announcements WHERE announcement_id = ?";
+  db.query(query, [announcementId], (err, result) => {
+    if (err) {
+      console.error("Delete announcement error:", err);
+      return res.status(500).json({ error: err.message });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Announcement not found" });
+    }
+    res.json({ message: "Announcement deleted successfully" });
+  });
+});
+
+//get properties for dropdown
+app.get("/api/citizens/:citizen_id/properties", (req, res) => {
+  const { citizen_id } = req.params;
+
+  // Step 1: get user_id from citizen_id
+  const userQuery = "SELECT user_id FROM users WHERE citizen_id= ?";
+
+  db.query(userQuery, [citizen_id], (err, userResult) => {
+    if (err) {
+      console.error("User lookup error:", err);
+      return res.status(500).json({ error: "Database error" });
+    }
+
+    if (userResult.length === 0) {
+      return res.status(404).json({ error: "Citizen not found" });
+    }
+
+    const user_id = userResult[0].user_id;
+
+    // Step 2: get properties
+    const propertyQuery = `
+      SELECT property_id, type, location
+      FROM properties
+      WHERE owner_id = ?
+    `;
+
+    db.query(propertyQuery, [user_id], (err, properties) => {
+      if (err) {
+        console.error("Property fetch error:", err);
+        return res.status(500).json({ error: "Database error" });
+      }
+
+      res.json({ properties });
+    });
+  });
+});
+
+//post new due
+app.post("/api/dues", (req, res) => {
+  const { property_id, type, amount, due_date, status, content } = req.body;
+
+  const query = `
+    INSERT INTO dues (property_id, type, amount, due_date, status, content)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `;
+
+  db.query(query, [property_id, type, amount, due_date, status, content], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ error: "Database error" });
+    }
+
+    res.json({ message: "Due added successfully" });
+  });
+});
 // Start the server
 const PORT = 5000;
 app.listen(PORT, () => {
