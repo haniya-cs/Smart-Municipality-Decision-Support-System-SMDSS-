@@ -5,9 +5,10 @@ import '../styles/CitizenLayout.css'; // Reusing the same beautiful styles
 
 const AdminLayout = () => {
   const navigate = useNavigate();
-
+  const session = JSON.parse(localStorage.getItem('smdss_session') || '{}');
   const handleSignOut = () => {
     // Basic sign out routine simulation
+     localStorage.removeItem('admin_session');
     navigate('/');
   };
 
@@ -61,10 +62,10 @@ const AdminLayout = () => {
 
         <div className="sidebar-footer">
           <div className="user-profile">
-            <div className="avatar" style={{ backgroundColor: 'var(--danger-color)' }}>A</div>
+            <div className="avatar" style={{ backgroundColor: 'var(--danger-color)' }}> {session.full_name ? session.full_name.charAt(0).toUpperCase() : 'A'}</div>
             <div className="user-info">
-              <h4 className="user-name">Administrator</h4>
-              <p className="user-email">admin@municipality.gov.lb</p>
+              <h4 className="user-name">{session.full_name || 'Administrator'}</h4>
+              <p className="user-email">{session.email || 'admin@municipality.gov.lb'}</p>
             </div>
           </div>
           
