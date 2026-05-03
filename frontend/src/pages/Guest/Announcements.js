@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BellRing, Calendar, Megaphone, Info, Image as ImageIcon } from 'lucide-react';
+import { BellRing, Calendar, Megaphone, Info } from 'lucide-react';
 import '../../styles/Announcements.css';
 
 const Announcements = () => {
@@ -50,16 +50,33 @@ const Announcements = () => {
     }
   };
 
+  const normalizeType = (type) => (type || 'general').toString().trim().toLowerCase();
+
+  const getTypeMeta = (type) => {
+    const normalized = normalizeType(type);
+    if (normalized === 'urgent') {
+      return { cardClass: 'urgent-announcement', badgeClass: 'badge-danger', badgeLabel: 'Urgent Alert' };
+    }
+    if (normalized === 'event' || normalized === 'meeting') {
+      return {
+        cardClass: 'meeting-event-announcement',
+        badgeClass: 'badge-success',
+        badgeLabel: normalized === 'event' ? 'Event / Festival' : 'Meeting / Hearing'
+      };
+    }
+    return { cardClass: 'other-announcement', badgeClass: 'badge-info', badgeLabel: 'General Info' };
+  };
+
   const getIconForType = (type) => {
-    switch (type) {
+    const normalized = normalizeType(type);
+    switch (normalized) {
       case 'urgent':
         return <BellRing size={24} color="var(--danger-color)" />;
       case 'event':
-        return <Calendar size={24} color="var(--success-color)" />;
       case 'meeting':
-        return <Megaphone size={24} color="var(--primary-color)" />;
+        return <Calendar size={24} color="var(--success-color)" />;
       case 'maintenance':
-        return <Info size={24} color="var(--info-color)" />;
+        return <Info size={24} color="var(--primary-color)" />;
       default:
         return <Megaphone size={24} color="var(--primary-color)" />;
     }
@@ -77,9 +94,9 @@ const Announcements = () => {
 
   if (filter === 'all') return true;
   if (filter === 'urgent') {
-  return item.type?.toLowerCase() === 'urgent';
+  return normalizeType(item.type) === 'urgent';
 }
-  if (filter === 'general') return item.type !== 'urgent';
+  if (filter === 'general') return normalizeType(item.type) !== 'urgent';
 
   return true;
 });
@@ -114,10 +131,12 @@ const Announcements = () => {
       </div>
 
       <div className="announcements-list">
-        {filteredAnnouncements.map((announcement) => (
+        {filteredAnnouncements.map((announcement) => {
+          const typeMeta = getTypeMeta(announcement.type);
+          return (
           <div 
             key={announcement.id} 
-            className={`glass-panel announcement-card ${announcement.type === 'urgent' ? 'urgent-announcement' : ''}`}
+            className={`glass-panel announcement-card ${typeMeta.cardClass}`}
           >
             <div className="announcement-layout-flex">
               {/* Image Section */}
@@ -141,15 +160,12 @@ const Announcements = () => {
                 </div>
                 <p className="announcement-text">{announcement.content}</p>
                 
-                {announcement.type === 'urgent' ? (
-                  <span className="badge badge-danger">Urgent Alert</span>
-                ) : (
-                  <span className="badge badge-info">General Info</span>
-                )}
+                <span className={`badge ${typeMeta.badgeClass}`}>{typeMeta.badgeLabel}</span>
               </div>
             </div>
           </div>
-        ))}
+          );
+        })}
         {filteredAnnouncements.length === 0 && (
           <p className="text-center" style={{ color: 'var(--text-muted)' }}>No announcements available.</p>
         )}

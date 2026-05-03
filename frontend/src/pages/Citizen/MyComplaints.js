@@ -98,7 +98,7 @@ const MyComplaints = () => {
                     <td style={{ padding: '1rem 1.5rem' }}>#{complaint.complaint_id}</td>
                     <td style={{ padding: '1rem 1.5rem' }}>{complaint.description}</td>
                     <td style={{ padding: '1rem 1.5rem' }}>
-                      <span className={`badge badge-${complaint.status?.toLowerCase() === 'resolved' ? 'success' : complaint.status?.toLowerCase() === 'pending' ? 'warning' : 'primary'}`}>
+                      <span className={`badge badge-${complaint.status?.toLowerCase() === 'resolved' ? 'success' : complaint.status?.toLowerCase() === 'pending' ? 'warning' : complaint.status?.toLowerCase() === 'in progress' ? 'info' : 'info'}`}>
                         {complaint.status || 'Pending'}
                       </span>
                     </td>

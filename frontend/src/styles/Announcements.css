@@ -18,6 +18,14 @@
   border-left: 4px solid var(--danger-color);
 }
 
+.meeting-event-announcement {
+  border-left: 4px solid var(--success-color);
+}
+
+.other-announcement {
+  border-left: 4px solid var(--primary-color);
+}
+
 .announcement-layout-flex {
   display: flex;
   gap: 1.5rem;

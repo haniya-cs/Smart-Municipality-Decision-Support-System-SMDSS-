@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Search, Filter, CheckCircle2, AlertCircle, Clock, MapPin, Eye, ChevronDown } from 'lucide-react';
+import { FileText, Search, Filter, CheckCircle2, AlertCircle, Clock, MapPin } from 'lucide-react';
 import '../../styles/Dashboard.css';
 
 const Complaints = () => {
@@ -8,6 +8,7 @@ const Complaints = () => {
   const [error, setError] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  const [filterCategory, setFilterCategory] = useState('all');
   const session = JSON.parse(localStorage.getItem('smdss_session') || '{}');
 
   useEffect(() => {
@@ -48,6 +49,15 @@ const Complaints = () => {
     }
   };
 
+  const categoryOptions = Array.from(
+    new Set(complaints.map((c) => c.category_name || 'General'))
+  ).sort((a, b) => a.localeCompare(b));
+
+  const totalComplaints = complaints.length;
+  const pendingCount = complaints.filter((c) => (c.status || '').toLowerCase() === 'pending').length;
+  const inProgressCount = complaints.filter((c) => (c.status || '').toLowerCase() === 'in progress').length;
+  const resolvedCount = complaints.filter((c) => (c.status || '').toLowerCase() === 'resolved').length;
+
   const filteredComplaints = complaints.filter(c => {
     const matchesSearch = 
       (c.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -55,8 +65,9 @@ const Complaints = () => {
       String(c.complaint_id).includes(searchTerm);
       
     const matchesStatus = filterStatus === 'all' || (c.status || '').toLowerCase() === filterStatus.toLowerCase();
+    const matchesCategory = filterCategory === 'all' || (c.category_name || 'General') === filterCategory;
     
-    return matchesSearch && matchesStatus;
+    return matchesSearch && matchesStatus && matchesCategory;
   });
 
   const getStatusBadge = (status) => {
@@ -79,6 +90,26 @@ const Complaints = () => {
         <div>
           <h1 className="page-header">Review Complaints</h1>
           <p className="page-subtitle">Manage, review, and update citizen complaints.</p>
+        </div>
+      </div>
+
+      {/* Summary */}
+      <div className="dashboard-stats-grid mb-8">
+        <div className="dashboard-stat-card admin-stat-card info">
+          <div className="stat-card-title">Total Complaints</div>
+          <h2 className="stat-card-value-lg stat-card-value-premium">{totalComplaints}</h2>
+        </div>
+        <div className="dashboard-stat-card admin-stat-card warning">
+          <div className="stat-card-title">Pending</div>
+          <h2 className="stat-card-value-lg stat-card-value-premium">{pendingCount}</h2>
+        </div>
+        <div className="dashboard-stat-card admin-stat-card info">
+          <div className="stat-card-title">In Progress</div>
+          <h2 className="stat-card-value-lg stat-card-value-premium">{inProgressCount}</h2>
+        </div>
+        <div className="dashboard-stat-card admin-stat-card success">
+          <div className="stat-card-title">Resolved</div>
+          <h2 className="stat-card-value-lg stat-card-value-premium">{resolvedCount}</h2>
         </div>
       </div>
 
@@ -108,6 +139,19 @@ const Complaints = () => {
               <option value="pending">Pending</option>
               <option value="in progress">In Progress</option>
               <option value="resolved">Resolved</option>
+            </select>
+            <select
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              className="form-control"
+              style={{ width: 'auto', minWidth: '170px' }}
+            >
+              <option value="all">All Categories</option>
+              {categoryOptions.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -146,7 +190,7 @@ const Complaints = () => {
                   </td>
                   <td>{complaint.category_name || 'General'}</td>
                   <td style={{ maxWidth: '300px' }}>
-                    <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '0.25rem' }}>
+                    <div style={{ whiteSpace: 'normal', overflowWrap: 'anywhere', lineHeight: '1.4', marginBottom: '0.25rem' }}>
                       {complaint.description}
                     </div>
                     {complaint.location && (

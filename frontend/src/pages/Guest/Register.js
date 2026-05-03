@@ -63,14 +63,14 @@ const Register = () => {
         localStorage.setItem(
           'smdss_session',
           JSON.stringify({
-            role: data.role_id === 2 ? 'citizen' : 'unknown',
+            role: Number(data.role_id) === 2 ? 'citizen' : 'unknown',
             citizen_id: data.citizen_id || citizenId,
             full_name: fullName || '',
             email: data.email || email
           })
         );
 
-        if (data.role_id === 2) {
+        if (Number(data.role_id) === 2) {
           navigate('/citizen/dashboard');
         } else {
           setError('Role not supported.');

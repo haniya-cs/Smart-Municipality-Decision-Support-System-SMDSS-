@@ -1,9 +1,9 @@
-const mysql = require ("mysql2");
+const mysql = require("mysql2");
 const db = mysql.createConnection({
   host: "localhost",
   user: "root",
   password: "",
-  database: "smdss_db (2)"
+  database: "smdss_db"
 });
 
 db.connect((err) => {
@@ -92,7 +92,7 @@ const storage = multer.diskStorage({
   }
 });
 
-const upload = multer({ 
+const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
   fileFilter: (req, file, cb) => {
@@ -211,8 +211,8 @@ app.post("/api/login", (req, res) => {
 
     const user = results[0];
 
-     console.log("Login query results:", results);
-     console.log("Role ID:", user.role_id);
+    console.log("Login query results:", results);
+    console.log("Role ID:", user.role_id);
 
     // Check if the password matches
     const isPasswordValid = await bcrypt.compare(password, user.password);
@@ -220,12 +220,12 @@ app.post("/api/login", (req, res) => {
       return res.status(401).json({ error: "Invalid password" });
     }
 
-     // Extract all roles for the user
+    // Extract all roles for the user
     const roles = results.map((row) => row.role_id);
 
     // Return user data along with roles
-    return res.json({ 
-      message: "Login successful", 
+    return res.json({
+      message: "Login successful",
       roles,
       user_id: user.user_id,
       citizen_id: user.citizen_id,
@@ -250,7 +250,6 @@ app.get("/api/citizens/:citizenId/dues", (req, res) => {
       d.amount,
       d.due_date,
       d.status,
-      d.payment_method,
       d.content
     FROM users u
     JOIN properties p ON p.owner_id = u.user_id
@@ -288,7 +287,6 @@ app.get("/api/citizens/:citizenId/dues", (req, res) => {
           amount: Number(row.amount),
           due_date: row.due_date,
           status: row.status,
-          payment_method: row.payment_method,
           content: row.content
         });
       }
@@ -299,38 +297,84 @@ app.get("/api/citizens/:citizenId/dues", (req, res) => {
 });
 
 // Pay a single due
-app.put("/api/dues/:dueId/pay", (req, res) => {
+app.put("/api/dues/:dueId/pay", async (req, res) => {
   const { dueId } = req.params;
-  const query = "UPDATE dues SET status = 'paid', payment_method = 'Credit Card' WHERE due_id = ?";
-  db.query(query, [dueId], (err, result) => {
-    if (err) {
-      console.error("Error paying due:", err);
-      return res.status(500).json({ error: "Internal server error" });
-    }
+  try {
+    const result = await queryAsync(
+      "UPDATE dues SET status = 'paid' WHERE due_id = ?",
+      [dueId]
+    );
     if (result.affectedRows === 0) {
       return res.status(404).json({ error: "Due not found" });
     }
+
+    const ownerRows = await queryAsync(
+      `
+      SELECT u.citizen_id, d.amount
+      FROM dues d
+      JOIN properties p ON d.property_id = p.property_id
+      JOIN users u ON p.owner_id = u.user_id
+      WHERE d.due_id = ?
+      LIMIT 1
+      `,
+      [dueId]
+    );
+    const actorCitizenId = ownerRows[0]?.citizen_id || null;
+    const amount = Number(ownerRows[0]?.amount || 0);
+
+    await logSystemActivity({
+      actorCitizenId,
+      activityType: "due_paid",
+      actionText: `paid due #${dueId}${amount ? ` ($${amount})` : ""}`,
+      referenceId: Number(dueId)
+    });
+
     res.json({ message: "Payment successful" });
-  });
+  } catch (err) {
+    console.error("Error paying due:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 // Pay all dues for a property
-app.put("/api/properties/:propertyId/pay-all", (req, res) => {
+app.put("/api/properties/:propertyId/pay-all", async (req, res) => {
   const { propertyId } = req.params;
-  const query = "UPDATE dues SET status = 'paid', payment_method = 'Credit Card' WHERE property_id = ? AND status = 'unpaid'";
-  db.query(query, [propertyId], (err, result) => {
-    if (err) {
-      console.error("Error paying property dues:", err);
-      return res.status(500).json({ error: "Internal server error" });
-    }
+  try {
+    const result = await queryAsync(
+      "UPDATE dues SET status = 'paid' WHERE property_id = ? AND status = 'unpaid'",
+      [propertyId]
+    );
+
+    const ownerRows = await queryAsync(
+      `
+      SELECT u.citizen_id
+      FROM properties p
+      JOIN users u ON p.owner_id = u.user_id
+      WHERE p.property_id = ?
+      LIMIT 1
+      `,
+      [propertyId]
+    );
+    const actorCitizenId = ownerRows[0]?.citizen_id || null;
+
+    await logSystemActivity({
+      actorCitizenId,
+      activityType: "dues_paid_bulk",
+      actionText: `paid all dues for property #${propertyId} (${result.affectedRows} dues)`,
+      referenceId: Number(propertyId)
+    });
+
     res.json({ message: "All outstanding dues paid successfully", updated: result.affectedRows });
-  });
+  } catch (err) {
+    console.error("Error paying property dues:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
 });
 
 // Submit a new complaint
 app.post("/api/complaints", async (req, res) => {
   const { citizen_id, description, location, category_id, language: providedLanguage } = req.body;
-  
+
   if (!citizen_id || !description) {
     return res.status(400).json({ error: "citizen_id and description are required" });
   }
@@ -441,31 +485,31 @@ app.get("/api/categories", (req, res) => {
 // Upload complaint image
 app.post("/api/complaints/:complaintId/images", upload.single('image'), (req, res) => {
   const { complaintId } = req.params;
-  
+
   console.log("Image upload request - complaintId:", complaintId);
   console.log("Uploaded file:", req.file);
-  
+
   if (!req.file) {
     return res.status(400).json({ error: "No image uploaded" });
   }
 
   // Store the URL path to the image
   const imageUrl = `/uploads/${req.file.filename}`;
-  
+
   const insertQuery = `
     INSERT INTO complaint_images (complaint_id, url) 
     VALUES (?, ?)
   `;
-  
+
   db.query(insertQuery, [complaintId, imageUrl], (err, result) => {
     if (err) {
       console.error("Image insert error:", err.message);
       console.error("Error code:", err.code);
       return res.status(500).json({ error: err.message });
     }
-    
-    res.json({ 
-      message: "Image uploaded successfully", 
+
+    res.json({
+      message: "Image uploaded successfully",
       image_id: result.insertId,
       url: imageUrl
     });
@@ -475,7 +519,7 @@ app.post("/api/complaints/:complaintId/images", upload.single('image'), (req, re
 // Get complaint images
 app.get("/api/complaints/:complaintId/images", (req, res) => {
   const { complaintId } = req.params;
-  
+
   const query = `SELECT * FROM complaint_images WHERE complaint_id = ?`;
   db.query(query, [complaintId], (err, results) => {
     if (err) {
@@ -489,16 +533,16 @@ app.get("/api/complaints/:complaintId/images", (req, res) => {
 // Get complaints for a citizen
 app.get("/api/citizens/:citizenId/complaints", (req, res) => {
   const { citizenId } = req.params;
-  
+
   // Try querying with the string citizen_id first
   const query = `SELECT * FROM complaints WHERE citizen_id = ? ORDER BY complaint_id DESC`;
-  
+
   db.query(query, [citizenId], (err, results) => {
     if (err) {
       console.error("Database error fetching complaints:", err);
       return res.status(500).json({ error: "Database error" });
-    } 
-    
+    }
+
     // If it returned empty, maybe the citizen_id column stores the integer user_id. Let's do a JOIN fallback.
     if (results.length === 0) {
       const fallbackQuery = `
@@ -536,27 +580,26 @@ app.get("/api/admin/citizens", (req, res) => {
   });
 });
 
-<<<<<<< HEAD
 // ==================== ANNOUNCEMENTS ENDPOINTS ====================
 
 // Create a new announcement (Admin)
 app.post("/api/announcements", upload.single('image'), (req, res) => {
   const { admin_id, title, content, type, publish_start, publish_end } = req.body;
-  const allowedTypes = ['urgent','event','general','meeting','maintenance'];
+  const allowedTypes = ['urgent', 'event', 'general', 'meeting', 'maintenance'];
 
-let finalType = (type || 'general').toString().trim().toLowerCase();
+  let finalType = (type || 'general').toString().trim().toLowerCase();
 
-if (!allowedTypes.includes(finalType)) {
-  finalType = 'general'; // fallback
-}
+  if (!allowedTypes.includes(finalType)) {
+    finalType = 'general'; // fallback
+  }
   //const finalType = (type || 'general').toString().trim().toLowerCase();
   if (!admin_id || !title || !content || !finalType) {
     return res.status(400).json({ error: "admin_id, title, content, and type are required" });
   }
-  
+
   const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
-//
- const getUserIdQuery = "SELECT user_id FROM users WHERE citizen_id = ?";
+  //
+  const getUserIdQuery = "SELECT user_id FROM users WHERE citizen_id = ?";
 
   db.query(getUserIdQuery, [admin_id], (err, result) => {
     if (err) {
@@ -570,22 +613,22 @@ if (!allowedTypes.includes(finalType)) {
 
     const userId = result[0].user_id;
 
-  console.log("Final type value:", finalType); // Debugging log
+    console.log("Final type value:", finalType); // Debugging log
 
     const query = `
       INSERT INTO announcements (admin_id, title, content, type, image, publish_start, publish_end) 
       VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
 
-    db.query(query, [userId, title, content, finalType, imageUrl, publish_start || null, publish_end || null], 
+    db.query(query, [userId, title, content, finalType, imageUrl, publish_start || null, publish_end || null],
       (err, result) => {
         if (err) {
           console.error("Insert announcement error:", err); // Log any errors
           return res.status(500).json({ error: "Database error", details: err.message });
         }
-        
-        res.json({ 
-          message: "Announcement published successfully", 
+
+        res.json({
+          message: "Announcement published successfully",
           announcement_id: result.insertId
         });
       }
@@ -601,7 +644,7 @@ app.get("/api/announcements", (req, res) => {
     LEFT JOIN users u ON a.admin_id = u.user_id
     ORDER BY a.announcement_id DESC
   `;
-  
+
   db.query(query, (err, results) => {
     if (err) {
       console.error("Database error fetching announcements:", err);
@@ -613,7 +656,7 @@ app.get("/api/announcements", (req, res) => {
 
 // Get urgent announcements only (for Home page)
 app.get("/api/announcements/urgent", (req, res) => {
-  
+
   const query = `
     SELECT a.*, u.full_name as admin_name
     FROM announcements a
@@ -626,7 +669,7 @@ app.get("/api/announcements/urgent", (req, res) => {
      )
     ORDER BY a.announcement_id DESC
   `;
-  
+
   db.query(query, (err, results) => {
     if (err) {
       console.error("Database error fetching urgent announcements:", err);
@@ -671,7 +714,7 @@ app.get("/api/announcements/public", (req, res) => {
 // Delete an announcement (Admin)
 app.delete("/api/announcements/:announcementId", (req, res) => {
   const { announcementId } = req.params;
-  
+
   const query = "DELETE FROM announcements WHERE announcement_id = ?";
   db.query(query, [announcementId], (err, result) => {
     if (err) {
@@ -740,7 +783,6 @@ app.post("/api/dues", (req, res) => {
     res.json({ message: "Due added successfully" });
   });
 });
-=======
 // Admin: Dashboard cards statistics
 app.get("/api/admin/dashboard-stats", async (req, res) => {
   try {
@@ -799,6 +841,58 @@ app.get("/api/admin/live-activities", async (req, res) => {
   }
 });
 
+// Public: Home page headline stats (derived from DB — no separate satisfaction survey yet)
+app.get("/api/public/home-stats", async (req, res) => {
+  try {
+    const [totalsRows, resolvedRows, avgHoursRows] = await Promise.all([
+      queryAsync(`SELECT COUNT(*) AS total FROM complaints`),
+      queryAsync(
+        `SELECT COUNT(*) AS total FROM complaints WHERE LOWER(TRIM(status)) = 'resolved'`
+      ),
+      queryAsync(
+        `
+        SELECT AVG(TIMESTAMPDIFF(HOUR, c.created_at, cu.first_resolved_at)) AS avg_hours
+        FROM complaints c
+        JOIN (
+          SELECT complaint_id, MIN(updated_at) AS first_resolved_at
+          FROM complaint_updates
+          WHERE LOWER(TRIM(status)) = 'resolved'
+          GROUP BY complaint_id
+        ) cu ON cu.complaint_id = c.complaint_id
+        WHERE LOWER(TRIM(c.status)) = 'resolved'
+        `
+      )
+    ]);
+
+    const totalComplaints = Number(totalsRows[0]?.total || 0);
+    const resolvedComplaints = Number(resolvedRows[0]?.total || 0);
+    const avgHoursRaw = avgHoursRows[0]?.avg_hours;
+    const avgHours =
+      avgHoursRaw === null || avgHoursRaw === undefined ? null : Number(avgHoursRaw);
+
+    let satisfactionPercent = null;
+    if (totalComplaints > 0) {
+      const resolvedRate = resolvedComplaints / totalComplaints;
+      let fastRate = 0;
+      if (avgHours !== null && !Number.isNaN(avgHours)) {
+        fastRate = avgHours <= 48 ? 1 : Math.max(0, 1 - (avgHours - 48) / 120);
+      }
+      const score = 55 + resolvedRate * 35 + fastRate * 10;
+      satisfactionPercent = Math.min(99, Math.max(65, Math.round(score)));
+    }
+
+    return res.json({
+      complaints_resolved: resolvedComplaints,
+      complaints_total: totalComplaints,
+      avg_resolution_hours: avgHours,
+      satisfaction_percent: satisfactionPercent
+    });
+  } catch (error) {
+    console.error("Home stats error:", error);
+    return res.status(500).json({ error: "Failed to load home stats" });
+  }
+});
+
 // Admin: Get all complaints
 app.get("/api/admin/complaints", (req, res) => {
   const query = `
@@ -813,7 +907,7 @@ app.get("/api/admin/complaints", (req, res) => {
       console.error("Database error fetching all complaints:", err);
       return res.status(500).json({ error: "Database error" });
     }
-    
+
     // Remove duplicate matches from the OR join condition by grouping by complaint_id
     const uniqueComplaints = [];
     const seenIds = new Set();
@@ -892,13 +986,12 @@ app.put("/api/admin/complaints/:id/status", async (req, res) => {
       current_status: status
     });
   } catch (error) {
-    await queryAsync("ROLLBACK").catch(() => {});
+    await queryAsync("ROLLBACK").catch(() => { });
     console.error("Status update error:", error);
     return res.status(500).json({ error: "Failed to update complaint status" });
   }
 });
 
->>>>>>> 12bcd89cd53c8e3f21d88c4585ca965d01b4e850
 // Start the server
 const PORT = 5000;
 app.listen(PORT, () => {

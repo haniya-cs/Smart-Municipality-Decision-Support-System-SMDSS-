@@ -6,9 +6,15 @@ import '../../styles/Home.css';
 const Home = () => {
   const [urgentAnnouncements, setUrgentAnnouncements] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [homeStats, setHomeStats] = useState({
+    complaints_resolved: null,
+    satisfaction_percent: null,
+    avg_resolution_hours: null
+  });
 
   useEffect(() => {
     fetchUrgentAnnouncements();
+    fetchHomeStats();
   }, []);
 
   const fetchUrgentAnnouncements = async () => {
@@ -25,6 +31,37 @@ const Home = () => {
       setLoading(false);
     }
   };
+
+  const fetchHomeStats = async () => {
+    try {
+      const response = await fetch('http://localhost:5000/api/public/home-stats');
+      if (!response.ok) return;
+      const data = await response.json();
+      setHomeStats({
+        complaints_resolved: data.complaints_resolved ?? null,
+        satisfaction_percent: data.satisfaction_percent ?? null,
+        avg_resolution_hours: data.avg_resolution_hours ?? null
+      });
+    } catch (e) {
+      console.error('Error fetching home stats:', e);
+    }
+  };
+
+  const resolvedDisplay =
+    homeStats.complaints_resolved === null
+      ? '—'
+      : `${new Intl.NumberFormat('en-US').format(homeStats.complaints_resolved)}+`;
+
+  const satisfactionDisplay =
+    homeStats.satisfaction_percent === null ? '—' : `${homeStats.satisfaction_percent}%`;
+
+  const avgResponseDisplay = (() => {
+    if (homeStats.avg_resolution_hours === null || Number.isNaN(homeStats.avg_resolution_hours)) {
+      return '—';
+    }
+    const h = Math.round(homeStats.avg_resolution_hours);
+    return h <= 48 ? '< 48h' : `${h}h`;
+  })();
 
   return (
     <div className="fade-in">
@@ -129,15 +166,15 @@ const Home = () => {
       <div className="stats-banner">
         <div className="container grid md:grid-cols-3 text-center">
           <div className="stat-item">
-            <h2 className="stat-value text-gradient" style={{color: 'white', WebkitTextFillColor: 'white'}}>2,400+</h2>
+            <h2 className="stat-value text-gradient" style={{color: 'white', WebkitTextFillColor: 'white'}}>{resolvedDisplay}</h2>
             <p className="stat-label">Complaints Resolved</p>
           </div>
           <div className="stat-item">
-            <h2 className="stat-value text-gradient" style={{color: 'white', WebkitTextFillColor: 'white'}}>98%</h2>
+            <h2 className="stat-value text-gradient" style={{color: 'white', WebkitTextFillColor: 'white'}}>{satisfactionDisplay}</h2>
             <p className="stat-label">Citizen Satisfaction</p>
           </div>
           <div className="stat-item">
-            <h2 className="stat-value text-gradient" style={{color: 'white', WebkitTextFillColor: 'white'}}>&lt; 48h</h2>
+            <h2 className="stat-value text-gradient" style={{color: 'white', WebkitTextFillColor: 'white'}}>{avgResponseDisplay}</h2>
             <p className="stat-label">Avg. Response Time</p>
           </div>
         </div>

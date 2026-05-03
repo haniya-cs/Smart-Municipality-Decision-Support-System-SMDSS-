@@ -15,12 +15,6 @@ const formatCurrencyCompact = (amount) =>
     maximumFractionDigits: 1
   }).format(Number(amount || 0));
 
-const COMPLAINT_CLUSTERS = [
-  { id: 'c-1', title: 'Main water pipe explosion', category: 'Infrastructure', count: 15, priority: 'CRITICAL', status: 'Pending', type: 'danger' },
-  { id: 'c-2', title: 'Large pothole on 4th Ave', category: 'Roads', count: 3, priority: 'MEDIUM', status: 'In Progress', type: 'warning' },
-  { id: 'c-3', title: 'Streetlight out', category: 'Electricity', count: 1, priority: 'LOW', status: 'Pending', type: 'info' }
-];
-
 const getRelativeTime = (inputDate) => {
   const time = new Date(inputDate).getTime();
   if (Number.isNaN(time)) return 'Just now';
@@ -34,7 +28,9 @@ const getRelativeTime = (inputDate) => {
 const activityTypeMeta = {
   complaint_submitted: { icon: AlertTriangle, colorClass: 'blue' },
   citizen_registered: { icon: Users, colorClass: 'yellow' },
-  complaint_status_changed: { icon: CheckCircle2, colorClass: 'green' }
+  complaint_status_changed: { icon: CheckCircle2, colorClass: 'green' },
+  due_paid: { icon: CheckCircle2, colorClass: 'green' },
+  dues_paid_bulk: { icon: CheckCircle2, colorClass: 'green' }
 };
 
 /**
@@ -57,31 +53,38 @@ const StatCard = ({ stat }) => {
   );
 };
 
-const ClusterRow = ({ cluster }) => (
-  <tr className={cluster.priority === 'CRITICAL' ? 'row-critical' : ''}>
+const ClusterRow = ({ cluster }) => {
+  const priorityMeta =
+    cluster.ai_priority === 'High'
+      ? { label: 'HIGH', type: 'danger' }
+      : cluster.ai_priority === 'Medium'
+        ? { label: 'MEDIUM', type: 'warning' }
+        : { label: 'LOW', type: 'info' };
+
+  return (
+  <tr className={priorityMeta.label === 'HIGH' ? 'row-critical' : ''}>
     <td>
-      <span className={`badge badge-${cluster.type}`}>{cluster.priority}</span>
+      <span className={`badge badge-${priorityMeta.type}`}>{priorityMeta.label}</span>
     </td>
     <td>
       <strong className="cluster-title-main">{cluster.title}</strong>
-      <span className={`cluster-subtag ${cluster.priority === 'CRITICAL' ? 'danger' : 'normal'}`}>
+      <span className={`cluster-subtag ${priorityMeta.label === 'HIGH' ? 'danger' : 'normal'}`}>
         {cluster.category}
       </span>
     </td>
     <td>
-      <select className="form-control status-select-sm" defaultValue={cluster.status}>
-        <option value="Pending">Pending</option>
-        <option value="In Progress">In Progress</option>
-        <option value="Resolved">Resolved</option>
-      </select>
+      <span className={`badge ${cluster.status === 'Pending' ? 'badge-warning' : 'badge-info'}`}>
+        {cluster.status}
+      </span>
     </td>
     <td style={{ textAlign: 'center' }}>
-      <span className={`count-badge ${cluster.priority === 'CRITICAL' ? 'danger' : 'normal'}`}>
-        {cluster.count}
+      <span className={`count-badge ${priorityMeta.label === 'HIGH' ? 'danger' : 'normal'}`}>
+        {cluster.reports}
       </span>
     </td>
   </tr>
-);
+  );
+};
 
 const ActivityItem = ({ activity }) => {
   const Icon = activity.icon;
@@ -114,6 +117,7 @@ const AdminDashboard = () => {
   });
   const [isLoadingStats, setIsLoadingStats] = useState(true);
   const [activities, setActivities] = useState([]);
+  const [smartClusters, setSmartClusters] = useState([]);
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -153,6 +157,25 @@ const AdminDashboard = () => {
 
     fetchActivities();
     intervalId = setInterval(fetchActivities, 10000);
+    return () => clearInterval(intervalId);
+  }, []);
+
+  useEffect(() => {
+    let intervalId;
+
+    const fetchSmartBoard = async () => {
+      try {
+        const response = await fetch('http://localhost:5000/api/admin/smart-board?limit=20');
+        if (!response.ok) throw new Error('Failed to fetch smart board');
+        const data = await response.json();
+        setSmartClusters(Array.isArray(data.clusters) ? data.clusters : []);
+      } catch (error) {
+        console.error('Smart board fetch error:', error);
+      }
+    };
+
+    fetchSmartBoard();
+    intervalId = setInterval(fetchSmartBoard, 15000);
     return () => clearInterval(intervalId);
   }, []);
 
@@ -251,9 +274,17 @@ const AdminDashboard = () => {
                 </tr>
               </thead>
               <tbody>
-                {COMPLAINT_CLUSTERS.map(cluster => (
-                  <ClusterRow key={cluster.id} cluster={cluster} />
-                ))}
+                {smartClusters.length === 0 ? (
+                  <tr>
+                    <td colSpan="4" style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--text-muted)' }}>
+                      No AI complaint clusters yet.
+                    </td>
+                  </tr>
+                ) : (
+                  smartClusters.map(cluster => (
+                    <ClusterRow key={cluster.cluster_id} cluster={cluster} />
+                  ))
+                )}
               </tbody>
             </table>
           </div>
