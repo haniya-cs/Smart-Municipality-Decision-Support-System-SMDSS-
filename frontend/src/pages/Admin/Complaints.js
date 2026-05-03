@@ -49,8 +49,11 @@ const Complaints = () => {
     }
   };
 
+  const getDisplayCategory = (c) =>
+    c.category_display_name || c.category_name || 'General';
+
   const categoryOptions = Array.from(
-    new Set(complaints.map((c) => c.category_name || 'General'))
+    new Set(complaints.map((c) => getDisplayCategory(c)))
   ).sort((a, b) => a.localeCompare(b));
 
   const totalComplaints = complaints.length;
@@ -65,7 +68,7 @@ const Complaints = () => {
       String(c.complaint_id).includes(searchTerm);
       
     const matchesStatus = filterStatus === 'all' || (c.status || '').toLowerCase() === filterStatus.toLowerCase();
-    const matchesCategory = filterCategory === 'all' || (c.category_name || 'General') === filterCategory;
+    const matchesCategory = filterCategory === 'all' || getDisplayCategory(c) === filterCategory;
     
     return matchesSearch && matchesStatus && matchesCategory;
   });
@@ -188,7 +191,7 @@ const Complaints = () => {
                     <div style={{ fontWeight: 500 }}>{complaint.full_name || 'Unknown Citizen'}</div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>ID: {complaint.user_citizen_id || complaint.citizen_id}</div>
                   </td>
-                  <td>{complaint.category_name || 'General'}</td>
+                  <td>{getDisplayCategory(complaint)}</td>
                   <td style={{ maxWidth: '300px' }}>
                     <div style={{ whiteSpace: 'normal', overflowWrap: 'anywhere', lineHeight: '1.4', marginBottom: '0.25rem' }}>
                       {complaint.description}
