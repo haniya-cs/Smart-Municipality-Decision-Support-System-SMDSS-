@@ -216,6 +216,42 @@ const registerAdminRoutes = ({ app, db, queryAsync, logSystemActivity }) => {
       return res.status(500).json({ error: "Failed to update complaint status" });
     }
   });
+ //citizen details update
+ app.put('/api/admin/citizens/:id', (req, res) => {
+  const { email, phone, address } = req.body;
+  const userId = req.params.id;
+
+  const sql = `
+    UPDATE users 
+    SET email = ?, phone = ?, address = ?
+    WHERE user_id = ?
+  `;
+
+  db.query(sql, [email, phone, address, userId], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: 'Database error' });
+    }
+
+    res.json({ message: 'Citizen updated successfully' });
+  });
+});
+
+// DELETE CITIZEN
+app.delete("/api/admin/citizens/:id", (req, res) => {
+  const citizenId = req.params.id;
+
+  const sql = "DELETE FROM users WHERE user_id = ?";
+
+  db.query(sql, [citizenId], (err, result) => {
+    if (err) {
+      console.error(err);
+      return res.status(500).json({ message: "Database error" });
+    }
+
+    res.json({ message: "Citizen deleted successfully" });
+  });
+});
 };
 
 module.exports = { registerAdminRoutes };

@@ -1,11 +1,68 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Eye, Edit, ShieldAlert } from 'lucide-react';
+import { Search, Edit, Trash2 } from 'lucide-react';
 import '../../styles/Dashboard.css';
 
 const AdminCitizens = () => {
   const [citizens, setCitizens] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedCitizen, setSelectedCitizen] = useState(null);
+
+  const [formData, setFormData] = useState({
+    email: '',
+    phone: '',
+    address: ''
+  });
+    const handleEditClick = (citizen) => {
+    setSelectedCitizen(citizen);
+    setFormData({
+      email: citizen.email || '',
+      phone: citizen.phone || '',
+      address: citizen.address || ''
+    });
+    setIsModalOpen(true);
+  };
+  //handle update citizen details
+  const handleUpdate = async () => {
+    try {
+      const res = await fetch(`http://localhost:5000/api/admin/citizens/${selectedCitizen.user_id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+
+      if (res.ok) {
+        const updatedList = citizens.map(c =>
+          c.user_id === selectedCitizen.user_id
+            ? { ...c, ...formData }
+            : c
+        );
+        setCitizens(updatedList);
+        setIsModalOpen(false);
+      }
+    } catch (err) {
+      console.error("Update failed:", err);
+    }
+  };
+
+  // DELETE CITIZEN
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this citizen?")) return;
+
+    try {
+      const res = await fetch(`http://localhost:5000/api/admin/citizens/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok) {
+        setCitizens(citizens.filter(c => c.user_id !== id));
+      }
+    } catch (err) {
+      console.error("Delete failed:", err);
+    }
+  };
+
 
   useEffect(() => {
     fetch('http://localhost:5000/api/admin/citizens')
@@ -28,6 +85,49 @@ const AdminCitizens = () => {
 
   return (
     <div className="container fade-in">
+        {isModalOpen && (
+        <div style={modalOverlay}>
+          <div style={modalBox}>
+            <h3 style={{ color: 'var(--primary-color)' }}>Edit Citizen</h3>
+             <div style={{ marginBottom: '0.5rem' }}>
+            <label>Email</label> 
+            <input
+              className="form-control"
+              placeholder="Email"
+              value={formData.email}
+              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+            />
+              </div>
+           <div style={{ marginBottom: '0.5rem' }}>
+            <label>Phone</label>
+            <input
+              className="form-control"
+              placeholder="Phone"
+              value={formData.phone}
+              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+            />
+            </div>
+
+             <label>Address</label>
+            <input
+              className="form-control"
+              placeholder="Address"
+              value={formData.address}
+              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+            />
+
+            <div style={{ display: 'flex', gap: '10px', marginTop: '1rem' }}>
+              <button className="btn btn-primary" onClick={handleUpdate}>
+                Save
+              </button>
+              <button className="btn btn-outline" onClick={() => setIsModalOpen(false)}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between items-center mb-8">
         <div className="citizen-welcome" style={{ marginBottom: 0 }}>
           <h1>Citizen Directory</h1>
@@ -60,7 +160,6 @@ const AdminCitizens = () => {
                 <th style={{ padding: '1rem 1.5rem', color: '#64748b', fontWeight: '600' }}>Citizen Info</th>
                 <th style={{ padding: '1rem 1.5rem', color: '#64748b', fontWeight: '600' }}>Contact</th>
                 <th style={{ padding: '1rem 1.5rem', color: '#64748b', fontWeight: '600' }}>Address</th>
-                <th style={{ padding: '1rem 1.5rem', color: '#64748b', fontWeight: '600' }}>Status</th>
                 <th style={{ padding: '1rem 1.5rem', color: '#64748b', fontWeight: '600', textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
@@ -89,21 +188,19 @@ const AdminCitizens = () => {
                     </td>
                     <td style={{ padding: '1rem 1.5rem', fontSize: '0.9rem', color: '#475569' }}>
                       {citizen.address || 'Not specified'}
-                    </td>
-                    <td style={{ padding: '1rem 1.5rem' }}>
-                      <span className="badge badge-success">Active</span>
-                    </td>
+                    </td> 
                     <td style={{ padding: '1rem 1.5rem', textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
-                        <button className="btn btn-outline" style={{ padding: '6px', minWidth: 'auto' }} title="View 360° Profile">
-                          <Eye size={16} />
-                        </button>
-                        <button className="btn btn-outline" style={{ padding: '6px', minWidth: 'auto', color: 'var(--primary-color)', borderColor: 'var(--primary-color)' }} title="Edit Details">
+                        <button className="btn btn-outline" style={{ padding: '6px', minWidth: 'auto', color: 'var(--primary-color)', borderColor: 'var(--primary-color)' }} title="Edit Details" onClick={() => handleEditClick(citizen)}>
                           <Edit size={16} />
                         </button>
-                        <button className="btn btn-outline" style={{ padding: '6px', minWidth: 'auto', color: '#e11d48', borderColor: '#e11d48' }} title="Suspend Account">
-                          <ShieldAlert size={16} />
-                        </button>
+                         <button
+                        className="btn btn-outline"
+                        style={{ color: '#e11d48', borderColor: '#e11d48' }}
+                        onClick={() => handleDelete(citizen.user_id)}
+                      >
+                        <Trash2 size={16} />
+                      </button>
                       </div>
                     </td>
                   </tr>
@@ -122,5 +219,32 @@ const AdminCitizens = () => {
     </div>
   );
 };
+ //styles for modal
+ const modalOverlay = {
+  position: 'fixed',
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+  backgroundColor: 'rgba(0, 0, 0, 0.6)',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 9999,
+  padding: '1rem',
+  
+};
 
+const modalBox = {
+  backgroundColor: '#ffffff',
+  padding: '2rem',
+  borderRadius: '12px',
+  width: '100%',
+  maxWidth: '420px',
+  boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+  maxHeight: '90vh',
+  overflowY: 'auto',
+  marginBottom: '0.4rem',
+  gap: '2rem',
+};
 export default AdminCitizens;

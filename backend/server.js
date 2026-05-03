@@ -35,7 +35,7 @@ registerComplaintRoutes({ app, db, queryAsync, upload, logSystemActivity });
 registerAnnouncementRoutes({ app, db, upload });
 registerAdminRoutes({ app, db, queryAsync, logSystemActivity });
 registerPublicRoutes({ app, queryAsync });
-
+ 
 const PORT = 5000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
