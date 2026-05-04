@@ -47,18 +47,42 @@ const registerAdminRoutes = ({ app, db, queryAsync, logSystemActivity }) => {
   });
 
   app.get("/api/admin/live-activities", async (req, res) => {
-    const limit = Math.min(Math.max(Number(req.query.limit) || 12, 1), 50);
+    const limit = Math.min(Math.max(Number(req.query.limit) || 12, 1), 500);
+    const offset = Math.max(Number(req.query.offset) || 0, 0);
+    const days = Math.min(Math.max(Number(req.query.days) || 0, 0), 30);
     try {
-      const rows = await queryAsync(
-        `
-        SELECT activity_id, actor_citizen_id, activity_type, action_text, reference_id, created_at
-        FROM system_activities
-        ORDER BY created_at DESC, activity_id DESC
-        LIMIT ?
-        `,
-        [limit]
-      );
-      return res.json({ activities: rows });
+      const whereClause = days > 0 ? `WHERE created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)` : ``;
+      const listValues = days > 0 ? [days, limit, offset] : [limit, offset];
+      const countValues = days > 0 ? [days] : [];
+
+      const [rows, totalRows] = await Promise.all([
+        queryAsync(
+          `
+          SELECT activity_id, actor_citizen_id, activity_type, action_text, reference_id, created_at
+          FROM system_activities
+          ${whereClause}
+          ORDER BY created_at DESC, activity_id DESC
+          LIMIT ? OFFSET ?
+          `,
+          listValues
+        ),
+        queryAsync(
+          `
+          SELECT COUNT(*) AS total
+          FROM system_activities
+          ${whereClause}
+          `,
+          countValues
+        )
+      ]);
+      return res.json({
+        activities: rows,
+        pagination: {
+          total: Number(totalRows[0]?.total || 0),
+          limit,
+          offset
+        }
+      });
     } catch (error) {
       return res.status(500).json({ error: "Failed to load live activities" });
     }

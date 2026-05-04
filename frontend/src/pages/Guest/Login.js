@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User, ShieldAlert } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import '../../styles/Register.css'; 
 
 const Login = () => {
@@ -117,6 +117,12 @@ const Login = () => {
           >
             {isLoggingIn ? 'Authenticating...' : 'Secure Login'}
           </button>
+
+          <div className="text-center mt-4" style={{ fontSize: '0.95rem' }}>
+            <Link to="/guest/forgot-password" className="link">
+              Forgot password?
+            </Link>
+          </div>
         </form>
       </div>
     </div>

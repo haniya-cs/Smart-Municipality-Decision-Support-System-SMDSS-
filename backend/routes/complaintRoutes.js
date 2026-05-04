@@ -33,11 +33,16 @@ const registerComplaintRoutes = ({ app, db, queryAsync, upload, logSystemActivit
       const users = await queryAsync(`SELECT user_id FROM users WHERE citizen_id = ? LIMIT 1`, [citizen_id]);
       if (!users.length) return res.status(404).json({ error: "Citizen not found" });
 
-      const categoryIdForComplaint = await resolveCategoryIdFromAiLabel(
+      const aiMappedCategoryId = await resolveCategoryIdFromAiLabel(
         queryAsync,
         aiResult.category,
         finalCategoryId
       );
+
+      // If the citizen picked a concrete category (not default "Other" = 7), keep that in `complaints`.
+      // Otherwise use the AI-derived category so "Other + good description" can still route correctly.
+      const categoryIdForComplaint =
+        finalCategoryId !== 7 ? finalCategoryId : aiMappedCategoryId;
 
       const candidateRows = await queryAsync(
         `

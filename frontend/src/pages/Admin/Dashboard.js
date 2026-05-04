@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   AlertTriangle, Users, Map, Zap, CheckCircle2,
   Activity, Shield
@@ -108,6 +109,7 @@ const ActivityItem = ({ activity }) => {
  * Orchestrates the layout and renders the modularized sub-components.
  */
 const AdminDashboard = () => {
+  const navigate = useNavigate();
   const [chartData] = useState([40, 60, 45, 80, 50, 90, 75]); // Mock weekly resolution data
   const [stats, setStats] = useState({
     high_priority: 0,
@@ -146,7 +148,7 @@ const AdminDashboard = () => {
 
     const fetchActivities = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/admin/live-activities?limit=12');
+        const response = await fetch('http://localhost:5000/api/admin/live-activities?limit=5&days=2');
         if (!response.ok) throw new Error('Failed to fetch live activities');
         const data = await response.json();
         setActivities(Array.isArray(data.activities) ? data.activities : []);
@@ -322,7 +324,9 @@ const AdminDashboard = () => {
                 })
               )}
             </div>
-            <button className="btn btn-outline full-log-btn">View Full Audit Log</button>
+            <button className="btn btn-outline full-log-btn" onClick={() => navigate('/admin/activity-log')}>
+              View Full Audit Log
+            </button>
           </div>
         </aside>
 

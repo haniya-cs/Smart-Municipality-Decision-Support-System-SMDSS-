@@ -94,6 +94,126 @@ const registerAuthRoutes = ({ app, db, logSystemActivity }) => {
       });
     });
   });
+
+  // Citizen-only: Forgot password (no email sending; verifies citizen_id + email then resets)
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    const { citizen_id, email, new_password } = req.body || {};
+    const cid = String(citizen_id || "").trim();
+    const em = String(email || "").trim().toLowerCase();
+    const pw = String(new_password || "").trim();
+
+    if (!cid || !em || !pw) {
+      return res.status(400).json({ error: "citizen_id, email, and new_password are required" });
+    }
+    if (pw.length < 6) {
+      return res.status(400).json({ error: "Password must be at least 6 characters" });
+    }
+
+    try {
+      // Only allow citizens (role_id = 2) to use this flow
+      const rows = await new Promise((resolve, reject) => {
+        db.query(
+          `
+          SELECT u.user_id, u.email
+          FROM users u
+          JOIN user_roles ur ON u.user_id = ur.user_id
+          WHERE u.citizen_id = ?
+            AND ur.role_id = 2
+          LIMIT 1
+          `,
+          [cid],
+          (err, results) => {
+            if (err) return reject(err);
+            return resolve(results);
+          }
+        );
+      });
+
+      if (!rows.length) {
+        return res.status(404).json({ error: "Citizen not found" });
+      }
+
+      const dbEmail = String(rows[0].email || "").trim().toLowerCase();
+      if (!dbEmail || dbEmail !== em) {
+        return res.status(401).json({ error: "Citizen ID and email do not match" });
+      }
+
+      const passwordHash = await bcrypt.hash(pw, 10);
+
+      await new Promise((resolve, reject) => {
+        db.query(
+          `UPDATE users SET password = ? WHERE user_id = ?`,
+          [passwordHash, rows[0].user_id],
+          (err) => {
+            if (err) return reject(err);
+            return resolve();
+          }
+        );
+      });
+
+      return res.json({ message: "Password reset successful" });
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Get user profile data (used by Citizen/Admin My Account page)
+  app.get("/api/users/:userId/profile", (req, res) => {
+    const { userId } = req.params;
+    db.query(
+      `
+      SELECT user_id, citizen_id, full_name, email, phone, address
+      FROM users
+      WHERE user_id = ?
+      LIMIT 1
+      `,
+      [userId],
+      (err, results) => {
+        if (err) return res.status(500).json({ error: "Internal server error" });
+        if (!results.length) return res.status(404).json({ error: "User not found" });
+        return res.json({ profile: results[0] });
+      }
+    );
+  });
+
+  // Update user profile (email, phone, address, optional password)
+  app.put("/api/users/:userId/profile", async (req, res) => {
+    const { userId } = req.params;
+    const { email, phone, address, password } = req.body;
+
+    if (!email || !phone || !address) {
+      return res.status(400).json({ error: "email, phone, and address are required" });
+    }
+
+    try {
+      let sql = `
+        UPDATE users
+        SET email = ?, phone = ?, address = ?
+        WHERE user_id = ?
+      `;
+      let values = [email, phone, address, userId];
+
+      const newPassword = String(password || "").trim();
+      if (newPassword) {
+        const passwordHash = await bcrypt.hash(newPassword, 10);
+        sql = `
+          UPDATE users
+          SET email = ?, phone = ?, address = ?, password = ?
+          WHERE user_id = ?
+        `;
+        values = [email, phone, address, passwordHash, userId];
+      }
+
+      db.query(sql, values, (err, result) => {
+        if (err) return res.status(500).json({ error: "Internal server error" });
+        if (!result.affectedRows) return res.status(404).json({ error: "User not found" });
+        return res.json({ message: "Profile updated successfully" });
+      });
+    } catch (error) {
+      return res.status(500).json({ error: "Internal server error" });
+    }
+  });
 };
 
 module.exports = { registerAuthRoutes };

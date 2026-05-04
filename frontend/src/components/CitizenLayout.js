@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
-import { Home, LayoutDashboard, FilePlus, FileText, CreditCard, LogOut, Building2 } from 'lucide-react';
+import { Home, LayoutDashboard, FilePlus, FileText, CreditCard, LogOut, Building2, UserCog } from 'lucide-react';
 import '../styles/CitizenLayout.css';
 
 const CitizenLayout = () => {
@@ -70,6 +70,11 @@ const CitizenLayout = () => {
               My Dues
             </NavLink>
           )}
+
+          <NavLink to="/citizen/account" className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}>
+            <UserCog size={18} />
+            My Account
+          </NavLink>
         </nav>
 
         <div className="sidebar-footer">
