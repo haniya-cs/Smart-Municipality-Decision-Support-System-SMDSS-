@@ -8,7 +8,7 @@ const AdminCitizens = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedCitizen, setSelectedCitizen] = useState(null);
-
+  
   const [formData, setFormData] = useState({
     email: '',
     phone: '',

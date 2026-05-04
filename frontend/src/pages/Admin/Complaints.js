@@ -9,6 +9,8 @@ const Complaints = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterCategory, setFilterCategory] = useState('all');
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagesMap, setImagesMap] = useState({});
   const session = JSON.parse(localStorage.getItem('smdss_session') || '{}');
 
   useEffect(() => {
@@ -20,7 +22,23 @@ const Complaints = () => {
       const response = await fetch('http://localhost:5000/api/admin/complaints');
       if (!response.ok) throw new Error('Failed to fetch complaints');
       const data = await response.json();
-      setComplaints(data.complaints || []);
+      const complaintsData = data.complaints || [];
+      setComplaints(complaintsData);
+      //setComplaints(data.complaints || []);
+      //fetch images for complaints
+       const imagesObject = {};
+
+    await Promise.all(
+      complaintsData.map(async (c) => {
+        const res = await fetch(
+          `http://localhost:5000/api/complaints/${c.complaint_id}/images`
+        );
+        const imgData = await res.json();
+        imagesObject[c.complaint_id] = imgData.images || [];
+      })
+    );
+
+    setImagesMap(imagesObject);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -179,6 +197,7 @@ const Complaints = () => {
                 <th>Citizen</th>
                 <th>Category</th>
                 <th>Details</th>
+                <th>Images</th>
                 <th>Status</th>
                 <th>Update Status</th>
               </tr>
@@ -201,6 +220,31 @@ const Complaints = () => {
                         <MapPin size={12} /> {complaint.location}
                       </div>
                     )}
+                  </td>
+                   <td>
+                   {imagesMap[complaint.complaint_id]?.length > 0 ? (
+                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                   {imagesMap[complaint.complaint_id].map(img => (
+                    <img
+                     key={img.image_id}
+                     src={`http://localhost:5000${img.url}`}
+                     alt="complaint"
+                      onClick={() =>
+                       setSelectedImage(`http://localhost:5000${img.url}`)
+                      }
+                      style={{
+                      width: 55,
+                      height: 55,
+                      objectFit: 'cover',
+                      borderRadius: 6,
+                      cursor: 'pointer'
+                      }}
+                  />
+                  ))}
+                 </div>
+                  ) : (
+                 <span style={{ color: '#999' }}>No image</span>
+                  )}
                   </td>
                   <td>
                     <div className="flex items-center gap-2">
@@ -226,8 +270,53 @@ const Complaints = () => {
           </table>
         )}
       </div>
+      
+      {/* Image Modal */}
+        {selectedImage && (
+  <div
+    onClick={() => setSelectedImage(null)}
+    style={{
+      position: 'fixed',
+      inset: 0,
+      zIndex: 9999,
+      background: 'rgba(255, 255, 255, 0.6)',
+      overflowY: 'auto',
+      padding: '40px 0',
+    }}
+  >
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        width: 'fit-content',
+        maxWidth: '400px',   // makes it small initially
+        margin: '0 auto',    // center horizontally only
+        background: '#fff',
+        borderRadius: '12px',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+        padding: '10px',
+      }}
+    >
+      <img
+        src={selectedImage}
+        alt="preview"
+        style={{
+           width: '120%',
+            transform: 'scale(1.7)',  
+            stransformOrigin: 'center',
+            marginTop: '60px',
+           borderRadius: '10px',
+           display: 'block',
+        }}
+      />
     </div>
+  </div>
+)}
+
+    </div>
+   
+
   );
 };
+ 
 
 export default Complaints;

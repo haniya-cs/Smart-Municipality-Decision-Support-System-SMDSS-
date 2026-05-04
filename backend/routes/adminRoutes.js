@@ -252,6 +252,26 @@ app.delete("/api/admin/citizens/:id", (req, res) => {
     res.json({ message: "Citizen deleted successfully" });
   });
 });
+
+//image getting for complaint 
+app.get('/api/complaints/:id/images', async (req, res) => {
+  try {
+    const complaintId = req.params.id;
+
+    const [rows] = await db.query(
+      `SELECT image_id, url 
+       FROM complaint_images 
+       WHERE complaint_id = ?`,
+      [complaintId]
+    );
+
+    res.json({ images: rows });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
 };
 
 module.exports = { registerAdminRoutes };
