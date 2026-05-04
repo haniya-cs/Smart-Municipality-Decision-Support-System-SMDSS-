@@ -199,6 +199,26 @@ const registerComplaintRoutes = ({ app, db, queryAsync, upload, logSystemActivit
       }
     );
   });
+  //image get for citizen complaints
+  app.get('/api/complaints/:id/images', async (req, res) => {
+  try {
+    const complaintId = req.params.id;
+
+    const [rows] = await db.query(
+      `SELECT image_id, url 
+       FROM complaint_images 
+       WHERE complaint_id = ?`,
+      [complaintId]
+    );
+
+    res.json({ images: rows });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 };
 
 module.exports = { registerComplaintRoutes };

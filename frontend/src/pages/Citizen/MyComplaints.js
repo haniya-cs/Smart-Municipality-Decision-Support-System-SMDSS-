@@ -8,6 +8,8 @@ const MyComplaints = () => {
   const [statusFilter, setStatusFilter] = useState('All Statuses');
   const [complaints, setComplaints] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagesMap, setImagesMap] = useState({});
 
   useEffect(() => {
     const session = JSON.parse(localStorage.getItem('smdss_session') || '{}');
@@ -15,9 +17,25 @@ const MyComplaints = () => {
 
     fetch(`http://localhost:5000/api/citizens/${citizenId}/complaints`)
       .then(res => res.json())
-      .then(data => {
+      .then(async data => {
         if (data.complaints) {
           setComplaints(data.complaints);
+            //Fetch images for each complaint
+        const imagesObj = {};
+
+        await Promise.all(
+          data.complaints.map(async (c) => {
+            try {
+              const res = await fetch(`http://localhost:5000/api/complaints/${c.complaint_id}/images`);
+              const imgData = await res.json();
+              imagesObj[c.complaint_id] = imgData.images || [];
+            } catch {
+              imagesObj[c.complaint_id] = [];
+            }
+          })
+        );
+
+        setImagesMap(imagesObj);
         }
         setIsLoading(false);
       })
@@ -89,6 +107,7 @@ const MyComplaints = () => {
                 <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #e2e8f0', textAlign: 'left' }}>
                   <th style={{ padding: '1rem 1.5rem', color: '#64748b', fontWeight: '600' }}>ID</th>
                   <th style={{ padding: '1rem 1.5rem', color: '#64748b', fontWeight: '600' }}>Description</th>
+                  <th style={{ padding: '1rem 1.5rem', color: '#64748b', fontWeight: '600' }}>Images</th>
                   <th style={{ padding: '1rem 1.5rem', color: '#64748b', fontWeight: '600' }}>Status</th>
                 </tr>
               </thead>
@@ -97,6 +116,31 @@ const MyComplaints = () => {
                   <tr key={complaint.complaint_id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                     <td style={{ padding: '1rem 1.5rem' }}>#{complaint.complaint_id}</td>
                     <td style={{ padding: '1rem 1.5rem' }}>{complaint.description}</td>
+                    <td style={{ padding: '1rem 1.5rem' }}>
+                      {imagesMap[complaint.complaint_id]?.length > 0 ? (
+                   <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                   {imagesMap[complaint.complaint_id].map(img => (
+                    <img
+                     key={img.image_id}
+                     src={`http://localhost:5000${img.url}`}
+                     alt="complaint"
+                      onClick={() =>
+                       setSelectedImage(`http://localhost:5000${img.url}`)
+                      }
+                      style={{
+                      width: 55,
+                      height: 55,
+                      objectFit: 'cover',
+                      borderRadius: 6,
+                      cursor: 'pointer'
+                      }}
+                  />
+                  ))}
+                 </div>
+                  ) : (
+                 <span style={{ color: '#999' }}>No image</span>
+                  )}
+                    </td>
                     <td style={{ padding: '1rem 1.5rem' }}>
                       <span className={`badge badge-${complaint.status?.toLowerCase() === 'resolved' ? 'success' : complaint.status?.toLowerCase() === 'pending' ? 'warning' : complaint.status?.toLowerCase() === 'in progress' ? 'info' : 'info'}`}>
                         {complaint.status || 'Pending'}
@@ -109,6 +153,46 @@ const MyComplaints = () => {
           </div>
         )}
       </div>
+       {selectedImage && (
+  <div
+    onClick={() => setSelectedImage(null)}
+    style={{
+      position: 'fixed',
+      inset: 0,
+      zIndex: 9999,
+      background: 'rgba(255, 255, 255, 0.6)',
+      overflowY: 'auto',
+      padding: '40px 0',
+    }}
+  >
+    <div
+      onClick={(e) => e.stopPropagation()}
+      style={{
+        width: 'fit-content',
+        maxWidth: '400px',   // makes it small initially
+        margin: '0 auto',    // center horizontally only
+        background: '#fff',
+        borderRadius: '12px',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.2)',
+        padding: '10px',
+      }}
+    >
+      <img
+        src={selectedImage}
+        alt="preview"
+        style={{
+           width: '120%',
+            transform: 'scale(1.7)',  
+            stransformOrigin: 'center',
+            marginTop: '60px',
+           borderRadius: '10px',
+           display: 'block',
+        }}
+      />
+    </div>
+  </div>
+)}
+
     </div>
   );
 };
