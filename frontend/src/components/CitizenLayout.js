@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { Home, LayoutDashboard, FilePlus, FileText, CreditCard, LogOut, Building2, UserCog } from 'lucide-react';
 import '../styles/CitizenLayout.css';
@@ -16,16 +16,29 @@ const CitizenLayout = () => {
 
   const session = JSON.parse(localStorage.getItem('smdss_session') || '{}');
 
-  React.useEffect(() => {
+  useEffect(() => {
+    const hasCitizenRole = Array.isArray(session.roles)
+      ? session.roles.includes(2)
+      : session.role === 'citizen';
+
+    if (!session.token || !hasCitizenRole) {
+      navigate('/guest/login');
+      return;
+    }
+
     if (session.citizen_id) {
-      fetch(`http://localhost:5000/api/citizens/${session.citizen_id}/dues`)
+      fetch(`http://localhost:5000/api/citizens/${session.citizen_id}/dues`, {
+        headers: {
+          Authorization: `Bearer ${session.token}`
+        }
+      })
         .then(res => res.json())
         .then(data => {
           if (data.properties) setHasProperties(data.properties.length > 0);
         })
         .catch(err => console.error("Error fetching dues for layout:", err));
     }
-  }, [session.citizen_id]);
+  }, [navigate, session.citizen_id, session.role, session.token]);
 
   return (
     <div className="citizen-layout">

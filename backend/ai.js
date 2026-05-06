@@ -1,5 +1,4 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
-require("dotenv").config();
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
@@ -18,7 +17,7 @@ The JSON object must have exactly these keys:
 {
   "priority": "High" or "Medium" or "Low",
   "category": "Roads & Potholes" or "Water Issues" or "Sewage & Drainage" or "Electricity Problems" or "Traffic Problems" or "Illegal Construction" or "Other",
-  "summary": "A very short 5-10 word summary of the issue in the original language of the complaint"
+  "summary": "A very short 5-20 word summary of the issue in the original language of the complaint"
 }
 
 Complaint to analyze: "${text}"

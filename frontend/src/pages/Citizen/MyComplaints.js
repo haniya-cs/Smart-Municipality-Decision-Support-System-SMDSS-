@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { PlusCircle, Search, FileText } from 'lucide-react';
+import { authorizedFetch } from '../../api/apiClient';
 import '../../styles/CitizenLayout.css';
 
 const MyComplaints = () => {
@@ -15,7 +16,7 @@ const MyComplaints = () => {
     const session = JSON.parse(localStorage.getItem('smdss_session') || '{}');
     const citizenId = session.citizen_id || 'LB-1004';
 
-    fetch(`http://localhost:5000/api/citizens/${citizenId}/complaints`)
+    authorizedFetch(`http://localhost:5000/api/citizens/${citizenId}/complaints`)
       .then(res => res.json())
       .then(async data => {
         if (data.complaints) {
@@ -26,7 +27,7 @@ const MyComplaints = () => {
         await Promise.all(
           data.complaints.map(async (c) => {
             try {
-              const res = await fetch(`http://localhost:5000/api/complaints/${c.complaint_id}/images`);
+              const res = await authorizedFetch(`http://localhost:5000/api/complaints/${c.complaint_id}/images`);
               const imgData = await res.json();
               imagesObj[c.complaint_id] = imgData.images || [];
             } catch {

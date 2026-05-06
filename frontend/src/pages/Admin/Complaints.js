@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Search, Filter, CheckCircle2, AlertCircle, Clock, MapPin } from 'lucide-react';
+import { authorizedFetch } from '../../api/apiClient';
 import '../../styles/Dashboard.css';
 
 const Complaints = () => {
@@ -19,7 +20,7 @@ const Complaints = () => {
 
   const fetchComplaints = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/admin/complaints');
+      const response = await authorizedFetch('http://localhost:5000/api/admin/complaints');
       if (!response.ok) throw new Error('Failed to fetch complaints');
       const data = await response.json();
       const complaintsData = data.complaints || [];
@@ -30,7 +31,7 @@ const Complaints = () => {
 
     await Promise.all(
       complaintsData.map(async (c) => {
-        const res = await fetch(
+        const res = await authorizedFetch(
           `http://localhost:5000/api/complaints/${c.complaint_id}/images`
         );
         const imgData = await res.json();
@@ -48,7 +49,7 @@ const Complaints = () => {
 
   const handleUpdateStatus = async (id, newStatus) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/complaints/${id}/status`, {
+      const response = await authorizedFetch(`http://localhost:5000/api/admin/complaints/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

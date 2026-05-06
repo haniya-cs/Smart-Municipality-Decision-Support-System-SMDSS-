@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { Home, LayoutDashboard, FileText, Megaphone, Users, LogOut, Building2, CreditCard, UserCog } from 'lucide-react';
 import '../styles/CitizenLayout.css'; // Reusing the same beautiful styles
@@ -6,9 +6,20 @@ import '../styles/CitizenLayout.css'; // Reusing the same beautiful styles
 const AdminLayout = () => {
   const navigate = useNavigate();
   const session = JSON.parse(localStorage.getItem('smdss_session') || '{}');
+
+  useEffect(() => {
+    const hasAdminRole = Array.isArray(session.roles)
+      ? session.roles.includes(1)
+      : session.role === 'admin';
+
+    if (!session.token || !hasAdminRole) {
+      navigate('/guest/login');
+    }
+  }, [navigate, session.role, session.roles, session.token]);
+
   const handleSignOut = () => {
     // Basic sign out routine simulation
-     localStorage.removeItem('admin_session');
+    localStorage.removeItem('smdss_session');
     navigate('/');
   };
 

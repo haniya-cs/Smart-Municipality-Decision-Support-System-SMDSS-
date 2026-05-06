@@ -1,5 +1,7 @@
+const { authenticateToken, requireRole } = require("../middleware/auth");
+
 const registerAdminRoutes = ({ app, db, queryAsync, logSystemActivity }) => {
-  app.get("/api/admin/citizens", (req, res) => {
+  app.get("/api/admin/citizens", authenticateToken, requireRole(1), (req, res) => {
     db.query(
       `
       SELECT u.user_id, u.citizen_id, u.full_name, u.email, u.phone, u.address
@@ -15,7 +17,7 @@ const registerAdminRoutes = ({ app, db, queryAsync, logSystemActivity }) => {
     );
   });
 
-  app.get("/api/admin/dashboard-stats", async (req, res) => {
+  app.get("/api/admin/dashboard-stats", authenticateToken, requireRole(1), async (req, res) => {
     try {
       const [highPriorityRows, pendingRows, duesRows, citizensRows] = await Promise.all([
         queryAsync(`
@@ -46,7 +48,7 @@ const registerAdminRoutes = ({ app, db, queryAsync, logSystemActivity }) => {
     }
   });
 
-  app.get("/api/admin/live-activities", async (req, res) => {
+  app.get("/api/admin/live-activities", authenticateToken, requireRole(1), async (req, res) => {
     const limit = Math.min(Math.max(Number(req.query.limit) || 12, 1), 500);
     const offset = Math.max(Number(req.query.offset) || 0, 0);
     const days = Math.min(Math.max(Number(req.query.days) || 0, 0), 30);
@@ -89,7 +91,7 @@ const registerAdminRoutes = ({ app, db, queryAsync, logSystemActivity }) => {
   });
 
   // AI duplicate clusters for the review board (non-resolved complaints only)
-  app.get("/api/admin/smart-board", async (req, res) => {
+  app.get("/api/admin/smart-board", authenticateToken, requireRole(1), async (req, res) => {
     const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 50);
     try {
       const rows = await queryAsync(
@@ -155,7 +157,7 @@ const registerAdminRoutes = ({ app, db, queryAsync, logSystemActivity }) => {
     }
   });
 
-  app.get("/api/admin/complaints", (req, res) => {
+  app.get("/api/admin/complaints", authenticateToken, requireRole(1), (req, res) => {
     db.query(
       `
       SELECT
@@ -190,7 +192,7 @@ const registerAdminRoutes = ({ app, db, queryAsync, logSystemActivity }) => {
     );
   });
 
-  app.put("/api/admin/complaints/:id/status", async (req, res) => {
+  app.put("/api/admin/complaints/:id/status", authenticateToken, requireRole(1), async (req, res) => {
     const { id } = req.params;
     const { status, updated_by = null } = req.body;
     if (!status) return res.status(400).json({ error: "Status is required" });
@@ -241,7 +243,7 @@ const registerAdminRoutes = ({ app, db, queryAsync, logSystemActivity }) => {
     }
   });
  //citizen details update
- app.put('/api/admin/citizens/:id', (req, res) => {
+ app.put('/api/admin/citizens/:id', authenticateToken, requireRole(1), (req, res) => {
   const { email, phone, address } = req.body;
   const userId = req.params.id;
 
@@ -262,7 +264,7 @@ const registerAdminRoutes = ({ app, db, queryAsync, logSystemActivity }) => {
 });
 
 // DELETE CITIZEN
-app.delete("/api/admin/citizens/:id", (req, res) => {
+app.delete("/api/admin/citizens/:id", authenticateToken, requireRole(1), (req, res) => {
   const citizenId = req.params.id;
 
   const sql = "DELETE FROM users WHERE user_id = ?";

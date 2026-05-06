@@ -1,5 +1,6 @@
 const { analyzeComplaint, detectDuplicateComplaint } = require("../ai");
 const { resolveCategoryIdFromAiLabel } = require("../utils/aiCategory");
+const { authenticateToken } = require("../middleware/auth");
 
 const readInsertId = (result) => {
   if (!result || typeof result !== "object") return null;
@@ -10,10 +11,13 @@ const readInsertId = (result) => {
 };
 
 const registerComplaintRoutes = ({ app, db, queryAsync, upload, logSystemActivity }) => {
-  app.post("/api/complaints", async (req, res) => {
+  app.post("/api/complaints", authenticateToken, async (req, res) => {
     const { citizen_id, description, location, category_id, language: providedLanguage } = req.body;
     if (!citizen_id || !description) {
       return res.status(400).json({ error: "citizen_id and description are required" });
+    }
+    if (!req.user.roles?.includes(1) && req.user.citizen_id !== citizen_id) {
+      return res.status(403).json({ error: "Forbidden" });
     }
 
     const language = providedLanguage || (/[\u0600-\u06FF]/.test(description) ? "ar" : "en");
@@ -148,9 +152,24 @@ const registerComplaintRoutes = ({ app, db, queryAsync, upload, logSystemActivit
     });
   });
 
-  app.post("/api/complaints/:complaintId/images", upload.single("image"), (req, res) => {
+  app.post("/api/complaints/:complaintId/images", authenticateToken, upload.single("image"), async (req, res) => {
     const { complaintId } = req.params;
     if (!req.file) return res.status(400).json({ error: "No image uploaded" });
+
+    if (!req.user.roles?.includes(1)) {
+      const ownerRows = await queryAsync(
+        `
+        SELECT citizen_id
+        FROM complaints
+        WHERE complaint_id = ?
+        LIMIT 1
+        `,
+        [complaintId]
+      );
+      if (!ownerRows.length || ownerRows[0].citizen_id !== req.user.citizen_id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+    }
 
     const imageUrl = `/uploads/${req.file.filename}`;
     db.query(
@@ -170,16 +189,35 @@ const registerComplaintRoutes = ({ app, db, queryAsync, upload, logSystemActivit
     );
   });
 
-  app.get("/api/complaints/:complaintId/images", (req, res) => {
+  app.get("/api/complaints/:complaintId/images", authenticateToken, async (req, res) => {
     const { complaintId } = req.params;
+    if (!req.user.roles?.includes(1)) {
+      const ownerRows = await queryAsync(
+        `
+        SELECT citizen_id
+        FROM complaints
+        WHERE complaint_id = ?
+        LIMIT 1
+        `,
+        [complaintId]
+      );
+      if (!ownerRows.length || ownerRows[0].citizen_id !== req.user.citizen_id) {
+        return res.status(403).json({ error: "Forbidden" });
+      }
+    }
+
     db.query("SELECT * FROM complaint_images WHERE complaint_id = ?", [complaintId], (err, results) => {
       if (err) return res.status(500).json({ error: "Database error" });
       return res.json({ images: results });
     });
   });
 
-  app.get("/api/citizens/:citizenId/complaints", (req, res) => {
+  app.get("/api/citizens/:citizenId/complaints", authenticateToken, (req, res) => {
     const { citizenId } = req.params;
+    if (!req.user.roles?.includes(1) && req.user.citizen_id !== citizenId) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
     db.query(
       "SELECT * FROM complaints WHERE citizen_id = ? ORDER BY complaint_id DESC",
       [citizenId],
@@ -204,25 +242,39 @@ const registerComplaintRoutes = ({ app, db, queryAsync, upload, logSystemActivit
       }
     );
   });
-  //image get for citizen complaints
-  app.get('/api/complaints/:id/images', async (req, res) => {
-  try {
-    const complaintId = req.params.id;
+  // Image get for citizen complaints
+  app.get('/api/complaints/:id/images', authenticateToken, async (req, res) => {
+    try {
+      const complaintId = req.params.id;
 
-    const [rows] = await db.query(
-      `SELECT image_id, url 
-       FROM complaint_images 
-       WHERE complaint_id = ?`,
-      [complaintId]
-    );
+      if (!req.user.roles?.includes(1)) {
+        const ownerRows = await queryAsync(
+          `
+          SELECT citizen_id
+          FROM complaints
+          WHERE complaint_id = ?
+          LIMIT 1
+          `,
+          [complaintId]
+        );
+        if (!ownerRows.length || ownerRows[0].citizen_id !== req.user.citizen_id) {
+          return res.status(403).json({ error: 'Forbidden' });
+        }
+      }
 
-    res.json({ images: rows });
+      const rows = await queryAsync(
+        `SELECT image_id, url 
+         FROM complaint_images 
+         WHERE complaint_id = ?`,
+        [complaintId]
+      );
 
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: 'Server error' });
-  }
-});
+      res.json({ images: rows });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Server error' });
+    }
+  });
 
 };
 

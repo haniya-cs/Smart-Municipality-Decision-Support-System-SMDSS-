@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Send, MapPin, Camera, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { authorizedFetch } from '../../api/apiClient';
 import '../../styles/SubmitComplaint.css';
 
 const SubmitComplaint = () => {
@@ -39,7 +40,7 @@ const SubmitComplaint = () => {
 
     try {
       // First, submit the complaint
-      const response = await fetch('http://localhost:5000/api/complaints', {
+      const response = await authorizedFetch('http://localhost:5000/api/complaints', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -63,7 +64,7 @@ const SubmitComplaint = () => {
           formData.append('image', selectedImage);
 
           try {
-            const imageResponse = await fetch(`http://localhost:5000/api/complaints/${complaintId}/images`, {
+            const imageResponse = await authorizedFetch(`http://localhost:5000/api/complaints/${complaintId}/images`, {
               method: 'POST',
               body: formData
             });

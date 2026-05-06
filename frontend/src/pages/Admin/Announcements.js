@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { PlusCircle } from 'lucide-react';
+import { authorizedFetch } from '../../api/apiClient';
 import '../../styles/Dashboard.css';
 
 const AdminAnnouncements = () => {
@@ -47,7 +48,7 @@ const AdminAnnouncements = () => {
         formDataToSend.append('image', formData.image);
       }
 
-      const response = await fetch('http://localhost:5000/api/announcements', {
+      const response = await authorizedFetch('http://localhost:5000/api/announcements', {
         method: 'POST',
         body: formDataToSend
       });

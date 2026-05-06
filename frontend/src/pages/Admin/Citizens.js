@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Edit, Trash2 } from 'lucide-react';
+import { authorizedFetch } from '../../api/apiClient';
 import '../../styles/Dashboard.css';
 
 const AdminCitizens = () => {
@@ -26,7 +27,7 @@ const AdminCitizens = () => {
   //handle update citizen details
   const handleUpdate = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/citizens/${selectedCitizen.user_id}`, {
+      const res = await authorizedFetch(`http://localhost:5000/api/admin/citizens/${selectedCitizen.user_id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -51,7 +52,7 @@ const AdminCitizens = () => {
     if (!window.confirm("Are you sure you want to delete this citizen?")) return;
 
     try {
-      const res = await fetch(`http://localhost:5000/api/admin/citizens/${id}`, {
+      const res = await authorizedFetch(`http://localhost:5000/api/admin/citizens/${id}`, {
         method: 'DELETE'
       });
 
@@ -65,7 +66,7 @@ const AdminCitizens = () => {
 
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/admin/citizens')
+    authorizedFetch('http://localhost:5000/api/admin/citizens')
       .then(res => res.json())
       .then(data => {
         if (data.citizens) setCitizens(data.citizens);

@@ -4,6 +4,7 @@ import {
   AlertTriangle, Users, Map, Zap, CheckCircle2,
   Activity, Shield
 } from 'lucide-react';
+import { authorizedFetch } from '../../api/apiClient';
 import '../../styles/Dashboard.css';
 import '../../styles/CitizenLayout.css'; 
 import '../../styles/AdminDashboard.css';
@@ -124,7 +125,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/admin/dashboard-stats');
+        const response = await authorizedFetch('http://localhost:5000/api/admin/dashboard-stats');
         if (!response.ok) throw new Error('Failed to fetch dashboard stats');
         const data = await response.json();
         setStats({
@@ -148,7 +149,7 @@ const AdminDashboard = () => {
 
     const fetchActivities = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/admin/live-activities?limit=5&days=2');
+        const response = await authorizedFetch('http://localhost:5000/api/admin/live-activities?limit=5&days=2');
         if (!response.ok) throw new Error('Failed to fetch live activities');
         const data = await response.json();
         setActivities(Array.isArray(data.activities) ? data.activities : []);
@@ -167,7 +168,7 @@ const AdminDashboard = () => {
 
     const fetchSmartBoard = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/admin/smart-board?limit=20');
+        const response = await authorizedFetch('http://localhost:5000/api/admin/smart-board?limit=20');
         if (!response.ok) throw new Error('Failed to fetch smart board');
         const data = await response.json();
         setSmartClusters(Array.isArray(data.clusters) ? data.clusters : []);

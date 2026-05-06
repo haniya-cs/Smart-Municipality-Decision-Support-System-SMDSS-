@@ -18,7 +18,11 @@ const RoleSelection = () => {
         <div className="grid gap-4">
           <button
             className="role-selection-card"
-            onClick={() => navigate('/citizen/dashboard')}
+            onClick={() => {
+              const currentSession = JSON.parse(localStorage.getItem('smdss_session') || '{}');
+              localStorage.setItem('smdss_session', JSON.stringify({ ...currentSession, role: 'citizen' }));
+              navigate('/citizen/dashboard');
+            }}
           >
             <div className="role-icon citizen-icon">
               <User size={30} color="var(--primary-color)" />
@@ -31,7 +35,11 @@ const RoleSelection = () => {
 
           <button
             className="role-selection-card"
-            onClick={() => navigate('/admin/dashboard')}
+            onClick={() => {
+              const currentSession = JSON.parse(localStorage.getItem('smdss_session') || '{}');
+              localStorage.setItem('smdss_session', JSON.stringify({ ...currentSession, role: 'admin' }));
+              navigate('/admin/dashboard');
+            }}
           >
             <div className="role-icon admin-icon">
               <Shield size={30} color="var(--danger-color)" />

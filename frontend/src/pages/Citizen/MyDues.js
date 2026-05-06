@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { CreditCard, Download, FileText, Home, Droplet, Zap, Trash2, Building } from 'lucide-react';
+import { authorizedFetch } from '../../api/apiClient';
 import '../../styles/Dashboard.css';
 import '../../styles/MyDues.css';
 
@@ -25,7 +26,7 @@ const MyDues = () => {
       }
 
       try {
-        const response = await fetch(`http://localhost:5000/api/citizens/${session.citizen_id}/dues`);
+        const response = await authorizedFetch(`http://localhost:5000/api/citizens/${session.citizen_id}/dues`);
         const data = await response.json();
 
         if (!response.ok) {
@@ -65,7 +66,7 @@ const MyDues = () => {
 
   const handlePayDue = async (dueId) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/dues/${dueId}/pay`, { method: 'PUT' });
+      const response = await authorizedFetch(`http://localhost:5000/api/dues/${dueId}/pay`, { method: 'PUT' });
       if (response.ok) {
         // Update local state to reflect the paid status
         setProperties(prev => prev.map(property => ({
@@ -84,7 +85,7 @@ const MyDues = () => {
 
   const handlePayTotal = async (propertyId) => {
     try {
-      const response = await fetch(`http://localhost:5000/api/properties/${propertyId}/pay-all`, { method: 'PUT' });
+      const response = await authorizedFetch(`http://localhost:5000/api/properties/${propertyId}/pay-all`, { method: 'PUT' });
       if (response.ok) {
         // Update all unpaid dues for this property to paid
         setProperties(prev => prev.map(property => {

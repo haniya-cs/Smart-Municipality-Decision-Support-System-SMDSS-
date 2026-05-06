@@ -1,5 +1,7 @@
+const { authenticateToken, requireRole } = require("../middleware/auth");
+
 const registerAnnouncementRoutes = ({ app, db, upload }) => {
-  app.post("/api/announcements", upload.single("image"), (req, res) => {
+  app.post("/api/announcements", authenticateToken, requireRole(1), upload.single("image"), (req, res) => {
     const { admin_id, title, content, type, publish_start, publish_end } = req.body;
     const allowedTypes = ["urgent", "event", "general", "meeting", "maintenance"];
     let finalType = (type || "general").toString().trim().toLowerCase();
@@ -91,7 +93,7 @@ const registerAnnouncementRoutes = ({ app, db, upload }) => {
     );
   });
 
-  app.delete("/api/announcements/:announcementId", (req, res) => {
+  app.delete("/api/announcements/:announcementId", authenticateToken, requireRole(1), (req, res) => {
     const { announcementId } = req.params;
     db.query("DELETE FROM announcements WHERE announcement_id = ?", [announcementId], (err, result) => {
       if (err) return res.status(500).json({ error: err.message });

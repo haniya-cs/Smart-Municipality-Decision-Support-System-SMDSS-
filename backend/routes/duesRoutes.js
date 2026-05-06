@@ -1,6 +1,11 @@
+const { authenticateToken, requireRole } = require("../middleware/auth");
+
 const registerDuesRoutes = ({ app, db, queryAsync, logSystemActivity }) => {
-  app.get("/api/citizens/:citizenId/dues", (req, res) => {
+  app.get("/api/citizens/:citizenId/dues", authenticateToken, (req, res) => {
     const { citizenId } = req.params;
+    if (!req.user.roles?.includes(1) && req.user.citizen_id !== citizenId) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
     const query = `
       SELECT
         p.property_id,
@@ -49,9 +54,26 @@ const registerDuesRoutes = ({ app, db, queryAsync, logSystemActivity }) => {
     });
   });
 
-  app.put("/api/dues/:dueId/pay", async (req, res) => {
+  app.put("/api/dues/:dueId/pay", authenticateToken, async (req, res) => {
     const { dueId } = req.params;
     try {
+      if (!req.user.roles?.includes(1)) {
+        const ownerRows = await queryAsync(
+          `
+          SELECT u.citizen_id
+          FROM dues d
+          JOIN properties p ON d.property_id = p.property_id
+          JOIN users u ON p.owner_id = u.user_id
+          WHERE d.due_id = ?
+          LIMIT 1
+          `,
+          [dueId]
+        );
+        if (!ownerRows.length || ownerRows[0].citizen_id !== req.user.citizen_id) {
+          return res.status(403).json({ error: "Forbidden" });
+        }
+      }
+
       const result = await queryAsync("UPDATE dues SET status = 'paid' WHERE due_id = ?", [dueId]);
       if (result.affectedRows === 0) return res.status(404).json({ error: "Due not found" });
 
@@ -80,9 +102,25 @@ const registerDuesRoutes = ({ app, db, queryAsync, logSystemActivity }) => {
     }
   });
 
-  app.put("/api/properties/:propertyId/pay-all", async (req, res) => {
+  app.put("/api/properties/:propertyId/pay-all", authenticateToken, async (req, res) => {
     const { propertyId } = req.params;
     try {
+      if (!req.user.roles?.includes(1)) {
+        const ownerRows = await queryAsync(
+          `
+          SELECT u.citizen_id
+          FROM properties p
+          JOIN users u ON p.owner_id = u.user_id
+          WHERE p.property_id = ?
+          LIMIT 1
+          `,
+          [propertyId]
+        );
+        if (!ownerRows.length || ownerRows[0].citizen_id !== req.user.citizen_id) {
+          return res.status(403).json({ error: "Forbidden" });
+        }
+      }
+
       const result = await queryAsync(
         "UPDATE dues SET status = 'paid' WHERE property_id = ? AND status = 'unpaid'",
         [propertyId]
@@ -111,8 +149,11 @@ const registerDuesRoutes = ({ app, db, queryAsync, logSystemActivity }) => {
     }
   });
 
-  app.get("/api/citizens/:citizen_id/properties", (req, res) => {
+  app.get("/api/citizens/:citizen_id/properties", authenticateToken, (req, res) => {
     const { citizen_id } = req.params;
+    if (!req.user.roles?.includes(1) && req.user.citizen_id !== citizen_id) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
     db.query("SELECT user_id FROM users WHERE citizen_id= ?", [citizen_id], (err, userResult) => {
       if (err) return res.status(500).json({ error: "Database error" });
       if (userResult.length === 0) return res.status(404).json({ error: "Citizen not found" });
@@ -132,7 +173,7 @@ const registerDuesRoutes = ({ app, db, queryAsync, logSystemActivity }) => {
     });
   });
 
-  app.post("/api/dues", (req, res) => {
+  app.post("/api/dues", authenticateToken, requireRole(1), (req, res) => {
     const { property_id, type, amount, due_date, status, content } = req.body;
     db.query(
       `

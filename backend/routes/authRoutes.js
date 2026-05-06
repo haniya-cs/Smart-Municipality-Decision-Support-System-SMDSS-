@@ -1,4 +1,6 @@
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const { authenticateToken } = require("../middleware/auth");
 
 const registerAuthRoutes = ({ app, db, logSystemActivity }) => {
   app.post("/api/verify-citizen-id", (req, res) => {
@@ -84,9 +86,22 @@ const registerAuthRoutes = ({ app, db, logSystemActivity }) => {
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) return res.status(401).json({ error: "Invalid password" });
 
+      const roles = [...new Set(results.map((row) => row.role_id))];
+      const tokenPayload = {
+        user_id: user.user_id,
+        citizen_id: user.citizen_id,
+        roles,
+        full_name: user.full_name,
+        email: user.email
+      };
+      const token = jwt.sign(tokenPayload, process.env.JWT_SECRET, {
+        expiresIn: process.env.JWT_EXPIRES_IN || "24h"
+      });
+
       return res.json({
         message: "Login successful",
-        roles: results.map((row) => row.role_id),
+        token,
+        roles,
         user_id: user.user_id,
         citizen_id: user.citizen_id,
         full_name: user.full_name,
@@ -159,8 +174,12 @@ const registerAuthRoutes = ({ app, db, logSystemActivity }) => {
   });
 
   // Get user profile data (used by Citizen/Admin My Account page)
-  app.get("/api/users/:userId/profile", (req, res) => {
+  app.get("/api/users/:userId/profile", authenticateToken, (req, res) => {
     const { userId } = req.params;
+    if (Number(userId) !== req.user.user_id && !req.user.roles?.includes(1)) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
     db.query(
       `
       SELECT user_id, citizen_id, full_name, email, phone, address
@@ -178,8 +197,12 @@ const registerAuthRoutes = ({ app, db, logSystemActivity }) => {
   });
 
   // Update user profile (email, phone, address, optional password)
-  app.put("/api/users/:userId/profile", async (req, res) => {
+  app.put("/api/users/:userId/profile", authenticateToken, async (req, res) => {
     const { userId } = req.params;
+    if (Number(userId) !== req.user.user_id && !req.user.roles?.includes(1)) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+
     const { email, phone, address, password } = req.body;
 
     if (!email || !phone || !address) {

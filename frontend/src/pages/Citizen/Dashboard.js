@@ -4,6 +4,7 @@ import {
   Clock, AlertCircle, CheckCircle2, CreditCard, 
   ArrowRight, FileText, PlusCircle, Building, Wallet 
 } from 'lucide-react';
+import { authorizedFetch } from '../../api/apiClient';
 import '../../styles/CitizenLayout.css';
 import '../../styles/CitizenDashboard.css';
 
@@ -99,8 +100,8 @@ const Dashboard = () => {
   useEffect(() => {
     // Fetch Dues & Complaints concurrently
     Promise.all([
-      fetch(`http://localhost:5000/api/citizens/${citizenId}/dues`).then(res => res.json()).catch(() => ({})),
-      fetch(`http://localhost:5000/api/citizens/${citizenId}/complaints`).then(res => res.json()).catch(() => ({}))
+      authorizedFetch(`http://localhost:5000/api/citizens/${citizenId}/dues`).then(res => res.json()).catch(() => ({})),
+      authorizedFetch(`http://localhost:5000/api/citizens/${citizenId}/complaints`).then(res => res.json()).catch(() => ({}))
     ]).then(([duesData, complaintsData]) => {
       
       // Process Dues

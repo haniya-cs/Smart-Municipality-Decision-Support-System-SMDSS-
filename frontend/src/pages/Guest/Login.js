@@ -29,12 +29,14 @@ const Login = () => {
 
       const data = await response.json();
 
-      if (response.ok) {
+      if (response.ok && data.token) {
         // Save session data to localStorage
         localStorage.setItem(
           'smdss_session',
           JSON.stringify({
+            token: data.token,
             role: data.roles[0] === 1 ? 'admin' : 'citizen',
+            roles: data.roles,
             user_id: data.user_id,
             citizen_id: data.citizen_id,
             full_name: data.full_name || '',
