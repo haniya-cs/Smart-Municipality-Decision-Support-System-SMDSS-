@@ -1,14 +1,63 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const modelName = process.env.GEMINI_MODEL || "gemini-2.5-flash";
+const geminiKeyString = process.env.GEMINI_API_KEYS || process.env.GEMINI_API_KEY || "";
+const geminiIndexedKeys = Object.keys(process.env)
+  .filter((key) => /^GEMINI_API_KEY(_\d+)?$/.test(key))
+  .sort()
+  .map((key) => process.env[key])
+  .filter(Boolean);
+const geminiApiKeys = [
+  ...geminiKeyString
+    .split(",")
+    .map((key) => key.trim())
+    .filter(Boolean),
+  ...geminiIndexedKeys
+].filter(Boolean);
+const geminiModel = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const duplicateThreshold = Number(process.env.DUPLICATE_THRESHOLD || 0.82);
 
-async function analyzeComplaint(text) {
-  try {
-    const model = genAI.getGenerativeModel({ model: modelName });
+const parseAiResponse = (output) => {
+  let cleanOutput = String(output || "").trim();
+  if (cleanOutput.startsWith("```json")) cleanOutput = cleanOutput.substring(7);
+  if (cleanOutput.startsWith("```")) cleanOutput = cleanOutput.substring(3);
+  if (cleanOutput.endsWith("```")) cleanOutput = cleanOutput.substring(0, cleanOutput.length - 3);
 
-    const prompt = `
+  const parsed = JSON.parse(cleanOutput.trim());
+  return {
+    priority: String(parsed.priority || "Medium").trim() || "Medium",
+    category: String(parsed.category || "Other").trim() || "Other",
+    summary: String(parsed.summary || "AI analysis failed").trim() || "AI analysis failed"
+  };
+};
+
+const callGemini = async (prompt, apiKey) => {
+  if (!apiKey) throw new Error("No Gemini API key configured");
+  const client = new GoogleGenerativeAI(apiKey);
+  const model = client.getGenerativeModel({ model: geminiModel });
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  return response.text().trim();
+};
+
+const tryGeminiKeys = async (prompt) => {
+  if (!geminiApiKeys.length) {
+    throw new Error("No Gemini API keys configured");
+  }
+
+  const errors = [];
+  for (const apiKey of geminiApiKeys) {
+    try {
+      return await callGemini(prompt, apiKey);
+    } catch (error) {
+      errors.push(error.message || String(error));
+    }
+  }
+
+  throw new Error(`All Gemini keys failed: ${errors.join(" | ")}`);
+};
+
+const analyzeComplaint = async (text) => {
+  const prompt = `
 You are an AI for a municipality system. Your job is to analyze a citizen's complaint.
 
 Return ONLY a valid JSON object with no markdown formatting, no \`\`\`json, and no other text.
@@ -17,47 +66,33 @@ The JSON object must have exactly these keys:
 {
   "priority": "High" or "Medium" or "Low",
   "category": "Roads & Potholes" or "Water Issues" or "Sewage & Drainage" or "Electricity Problems" or "Traffic Problems" or "Illegal Construction" or "Other",
-  "summary": "A very short 5-20 word summary of the issue in the original language of the complaint"
+  "summary": "A very short 5-10 word summary of the issue in the original language of the complaint"
 }
 
 Complaint to analyze: "${text}"
 `;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const output = response.text().trim();
-
-    // Sometimes Gemini wraps JSON in markdown code blocks, let's clean it up if it does
-    let cleanOutput = output;
-    if (cleanOutput.startsWith('\`\`\`json')) {
-      cleanOutput = cleanOutput.substring(7);
-    }
-    if (cleanOutput.startsWith('\`\`\`')) {
-      cleanOutput = cleanOutput.substring(3);
-    }
-    if (cleanOutput.endsWith('\`\`\`')) {
-      cleanOutput = cleanOutput.substring(0, cleanOutput.length - 3);
-    }
-
-    return JSON.parse(cleanOutput.trim());
-  } catch (error) {
-    console.error("AI Analysis Error:", error);
-    // Return a fallback so the system doesn't crash
+  try {
+    const geminiOutput = await tryGeminiKeys(prompt);
+    return parseAiResponse(geminiOutput);
+  } catch (geminiError) {
+    console.error("AI Analysis Error:", geminiError.message || geminiError);
     return {
       priority: "Medium",
       category: "Other",
       summary: "AI analysis failed"
     };
   }
-}
+};
 
-async function detectDuplicateComplaint(newComplaintText, candidates = []) {
+const detectDuplicateComplaint = async (newComplaintText, candidates = []) => {
   if (!Array.isArray(candidates) || candidates.length === 0) {
     return { duplicateOfId: null, similarityScore: 0 };
   }
 
   try {
-    const model = genAI.getGenerativeModel({ model: modelName });
+    const client = new GoogleGenerativeAI(geminiApiKeys[0]);
+    const model = client.getGenerativeModel({ model: geminiModel });
     const lightweightCandidates = candidates.map((item) => ({
       analysisId: item.analysisId,
       complaintId: item.complaintId,
@@ -129,6 +164,6 @@ ${JSON.stringify(lightweightCandidates)}
     console.error("Duplicate Detection Error:", error);
     return { duplicateOfId: null, similarityScore: 0 };
   }
-}
+};
 
 module.exports = { analyzeComplaint, detectDuplicateComplaint };
