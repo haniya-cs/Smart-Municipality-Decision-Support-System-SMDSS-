@@ -140,8 +140,16 @@ const registerComplaintRoutes = ({ app, db, queryAsync, upload, logSystemActivit
         }
       }
 
-      const users = await queryAsync(`SELECT user_id FROM users WHERE citizen_id = ? LIMIT 1`, [citizen_id]);
-      if (!users.length) return res.status(404).json({ error: "Citizen not found" });
+      const userRows = await queryAsync(
+        "SELECT user_id FROM users WHERE citizen_id = ? LIMIT 1",
+        [citizen_id]
+      );
+
+      if (userRows.length === 0) {
+        return res.status(404).json({ error: "Citizen not found" });
+      }
+
+      const userId = userRows[0].user_id;
 
       const aiMappedCategoryId = await resolveCategoryIdFromAiLabel(
         queryAsync,
@@ -161,7 +169,7 @@ const registerComplaintRoutes = ({ app, db, queryAsync, upload, logSystemActivit
         INSERT INTO complaints (citizen_id, category_id, analysis_id, description, language, status, location)
         VALUES (?, ?, ?, ?, ?, 'Pending', ?)
         `,
-        [users[0].user_id, categoryIdForComplaint, analysisId, description, language, location || null]
+        [userId, categoryIdForComplaint, analysisId, description, language, location || null]
       );
 
       const newComplaintId = readInsertId(complaintInsertResult);
