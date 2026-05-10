@@ -74,6 +74,7 @@ const SubmitComplaint = () => {
             
             if (!imageResponse.ok) {
               console.error("Image upload error:", result);
+              alert(result.error || "Image upload failed");
             }
           } catch (imgErr) {
             console.error("Image upload failed:", imgErr);

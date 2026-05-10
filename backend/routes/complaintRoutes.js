@@ -212,7 +212,27 @@ const registerComplaintRoutes = ({ app, db, queryAsync, upload, logSystemActivit
       return res.status(500).json({ error: "Failed to submit complaint with AI analysis" });
     }
   });
+ app.get("/api/citizens/:citizenId/complaints", authenticateToken, async (req, res) => {
+  const { citizenId } = req.params;
 
+  try {
+    const rows = await queryAsync(
+      `
+      SELECT c.*
+      FROM complaints c
+      JOIN users u ON c.citizen_id = u.user_id
+      WHERE u.citizen_id = ?
+      ORDER BY c.complaint_id DESC
+      `,
+      [citizenId]
+    );
+
+    return res.json({ complaints: rows });
+  } catch (err) {
+    console.error(err);
+    return res.status(500).json({ error: "Database error" });
+  }
+});
   app.get("/api/categories", (req, res) => {
     db.query("SELECT * FROM categories", (err, results) => {
       if (err) return res.status(500).json({ error: "Database error" });
@@ -227,14 +247,15 @@ const registerComplaintRoutes = ({ app, db, queryAsync, upload, logSystemActivit
     if (!req.user.roles?.includes(1)) {
       const ownerRows = await queryAsync(
         `
-        SELECT citizen_id
-        FROM complaints
-        WHERE complaint_id = ?
-        LIMIT 1
+        SELECT c.citizen_id, u.citizen_id AS citizenCode
+         FROM complaints c
+          JOIN users u ON c.citizen_id = u.user_id
+         WHERE c.complaint_id = ?
+         LIMIT 1
         `,
         [complaintId]
       );
-      if (!ownerRows.length || ownerRows[0].citizen_id !== req.user.citizen_id) {
+      if (!ownerRows.length || ownerRows[0].citizenCode !== req.user.citizen_id) {
         return res.status(403).json({ error: "Forbidden" });
       }
     }
@@ -257,59 +278,7 @@ const registerComplaintRoutes = ({ app, db, queryAsync, upload, logSystemActivit
     );
   });
 
-  app.get("/api/complaints/:complaintId/images", authenticateToken, async (req, res) => {
-    const { complaintId } = req.params;
-    if (!req.user.roles?.includes(1)) {
-      const ownerRows = await queryAsync(
-        `
-        SELECT citizen_id
-        FROM complaints
-        WHERE complaint_id = ?
-        LIMIT 1
-        `,
-        [complaintId]
-      );
-      if (!ownerRows.length || ownerRows[0].citizen_id !== req.user.citizen_id) {
-        return res.status(403).json({ error: "Forbidden" });
-      }
-    }
 
-    db.query("SELECT * FROM complaint_images WHERE complaint_id = ?", [complaintId], (err, results) => {
-      if (err) return res.status(500).json({ error: "Database error" });
-      return res.json({ images: results });
-    });
-  });
-
-  app.get("/api/citizens/:citizenId/complaints", authenticateToken, (req, res) => {
-    const { citizenId } = req.params;
-    if (!req.user.roles?.includes(1) && req.user.citizen_id !== citizenId) {
-      return res.status(403).json({ error: "Forbidden" });
-    }
-
-    db.query(
-      "SELECT * FROM complaints WHERE citizen_id = ? ORDER BY complaint_id DESC",
-      [citizenId],
-      (err, results) => {
-        if (err) return res.status(500).json({ error: "Database error" });
-        if (results.length > 0) return res.json({ complaints: results });
-
-        db.query(
-          `
-          SELECT c.*
-          FROM complaints c
-          JOIN users u ON c.citizen_id = u.user_id
-          WHERE u.citizen_id = ?
-          ORDER BY c.complaint_id DESC
-          `,
-          [citizenId],
-          (err2, results2) => {
-            if (err2) return res.status(500).json({ error: "Database error" });
-            return res.json({ complaints: results2 });
-          }
-        );
-      }
-    );
-  });
   // Image get for citizen complaints
   app.get('/api/complaints/:id/images', authenticateToken, async (req, res) => {
     try {
@@ -318,14 +287,15 @@ const registerComplaintRoutes = ({ app, db, queryAsync, upload, logSystemActivit
       if (!req.user.roles?.includes(1)) {
         const ownerRows = await queryAsync(
           `
-          SELECT citizen_id
-          FROM complaints
-          WHERE complaint_id = ?
+          SELECT c.citizen_id, u.citizen_id AS citizenCode
+          FROM complaints c
+          JOIN users u ON c.citizen_id = u.user_id
+          WHERE c.complaint_id = ?
           LIMIT 1
           `,
           [complaintId]
         );
-        if (!ownerRows.length || ownerRows[0].citizen_id !== req.user.citizen_id) {
+        if (!ownerRows.length || ownerRows[0].citizenCode !== req.user.citizen_id) {
           return res.status(403).json({ error: 'Forbidden' });
         }
       }
