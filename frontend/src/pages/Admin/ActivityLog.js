@@ -31,7 +31,7 @@ const ActivityLog = () => {
 
     const fetchActivities = async () => {
       try {
-        const response = await authorizedFetch('http://localhost:5000/api/admin/live-activities?limit=500&days=2');
+        const response = await authorizedFetch(`${process.env.REACT_APP_API_BASE_URL}/api/admin/live-activities?limit=500&days=2`);
         if (!response.ok) throw new Error('Failed to fetch activity log');
         const data = await response.json();
         setActivities(Array.isArray(data.activities) ? data.activities : []);

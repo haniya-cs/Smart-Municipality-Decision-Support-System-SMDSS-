@@ -31,7 +31,7 @@ const AdminDues = () => {
   }
 
   try {
-    const res = await authorizedFetch("http://localhost:5000/api/dues", {
+    const res = await authorizedFetch(`${process.env.REACT_APP_API_BASE_URL}/api/dues`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(formData)
@@ -67,7 +67,7 @@ const AdminDues = () => {
   if (!citizenId) return;
 
   try {
-    const res = await authorizedFetch(`http://localhost:5000/api/citizens/${citizenId}/properties`);
+    const res = await authorizedFetch(`${process.env.REACT_APP_API_BASE_URL}/api/citizens/${citizenId}/properties`);
     const data = await res.json();
 
     if (!res.ok) {

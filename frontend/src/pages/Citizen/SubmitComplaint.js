@@ -40,7 +40,7 @@ const SubmitComplaint = () => {
 
     try {
       // First, submit the complaint
-      const response = await authorizedFetch('http://localhost:5000/api/complaints', {
+      const response = await authorizedFetch(`${process.env.REACT_APP_API_BASE_URL}/api/complaints`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -64,7 +64,7 @@ const SubmitComplaint = () => {
           formData.append('image', selectedImage);
 
           try {
-            const imageResponse = await authorizedFetch(`http://localhost:5000/api/complaints/${complaintId}/images`, {
+            const imageResponse = await authorizedFetch(`${process.env.REACT_APP_API_BASE_URL}/api/complaints/${complaintId}/images`, {
               method: 'POST',
               body: formData
             });

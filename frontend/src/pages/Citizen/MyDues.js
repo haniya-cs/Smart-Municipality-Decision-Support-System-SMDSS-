@@ -26,7 +26,7 @@ const MyDues = () => {
       }
 
       try {
-        const response = await authorizedFetch(`http://localhost:5000/api/citizens/${session.citizen_id}/dues`);
+        const response = await authorizedFetch(`${process.env.REACT_APP_API_BASE_URL}/api/citizens/${session.citizen_id}/dues`);
         const data = await response.json();
 
         if (!response.ok) {
@@ -66,7 +66,7 @@ const MyDues = () => {
 
   const handlePayDue = async (dueId) => {
     try {
-      const response = await authorizedFetch(`http://localhost:5000/api/dues/${dueId}/pay`, { method: 'PUT' });
+      const response = await authorizedFetch(`${process.env.REACT_APP_API_BASE_URL}/api/dues/${dueId}/pay`, { method: 'PUT' });
       if (response.ok) {
         // Update local state to reflect the paid status
         setProperties(prev => prev.map(property => ({
@@ -85,7 +85,7 @@ const MyDues = () => {
 
   const handlePayTotal = async (propertyId) => {
     try {
-      const response = await authorizedFetch(`http://localhost:5000/api/properties/${propertyId}/pay-all`, { method: 'PUT' });
+      const response = await authorizedFetch(`${process.env.REACT_APP_API_BASE_URL}/api/properties/${propertyId}/pay-all`, { method: 'PUT' });
       if (response.ok) {
         // Update all unpaid dues for this property to paid
         setProperties(prev => prev.map(property => {

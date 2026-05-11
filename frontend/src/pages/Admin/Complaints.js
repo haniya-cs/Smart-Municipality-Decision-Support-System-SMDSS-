@@ -20,7 +20,7 @@ const Complaints = () => {
 
   const fetchComplaints = async () => {
     try {
-      const response = await authorizedFetch('http://localhost:5000/api/admin/complaints');
+      const response = await authorizedFetch(`${process.env.REACT_APP_API_BASE_URL}/api/admin/complaints`);
       if (!response.ok) throw new Error('Failed to fetch complaints');
       const data = await response.json();
       const complaintsData = data.complaints || [];
@@ -31,9 +31,7 @@ const Complaints = () => {
 
     await Promise.all(
       complaintsData.map(async (c) => {
-        const res = await authorizedFetch(
-          `http://localhost:5000/api/complaints/${c.complaint_id}/images`
-        );
+        const res = await authorizedFetch(`${process.env.REACT_APP_API_BASE_URL}/api/complaints/${c.complaint_id}/images`);
         const imgData = await res.json();
         imagesObject[c.complaint_id] = imgData.images || [];
       })
@@ -49,7 +47,7 @@ const Complaints = () => {
 
   const handleUpdateStatus = async (id, newStatus) => {
     try {
-      const response = await authorizedFetch(`http://localhost:5000/api/admin/complaints/${id}/status`, {
+      const response = await authorizedFetch(`${process.env.REACT_APP_API_BASE_URL}/api/admin/complaints/${id}/status`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -228,10 +226,10 @@ const Complaints = () => {
                    {imagesMap[complaint.complaint_id].map(img => (
                     <img
                      key={img.image_id}
-                     src={`http://localhost:5000${img.url}`}
+                     src={`${process.env.REACT_APP_API_BASE_URL}${img.url}`}
                      alt="complaint"
                       onClick={() =>
-                       setSelectedImage(`http://localhost:5000${img.url}`)
+                       setSelectedImage(`${process.env.REACT_APP_API_BASE_URL}${img.url}`)
                       }
                       style={{
                       width: 55,

@@ -27,7 +27,7 @@ const CitizenLayout = () => {
     }
 
     if (session.citizen_id) {
-      fetch(`http://localhost:5000/api/citizens/${session.citizen_id}/dues`, {
+      fetch(`${process.env.REACT_APP_API_BASE_URL}/api/citizens/${session.citizen_id}/dues`, {
         headers: {
           Authorization: `Bearer ${session.token}`
         }

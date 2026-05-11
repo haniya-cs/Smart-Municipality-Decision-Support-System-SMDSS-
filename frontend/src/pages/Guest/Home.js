@@ -19,7 +19,7 @@ const Home = () => {
 
   const fetchUrgentAnnouncements = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/announcements/urgent');
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/api/announcements/urgent`);
       const data = await response.json();
       
       if (data.announcements) {
@@ -34,7 +34,7 @@ const Home = () => {
 
   const fetchHomeStats = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/public/home-stats');
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/api/public/home-stats`);
       if (!response.ok) return;
       const data = await response.json();
       setHomeStats({

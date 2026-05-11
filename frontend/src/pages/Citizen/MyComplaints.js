@@ -16,7 +16,7 @@ const MyComplaints = () => {
     const session = JSON.parse(localStorage.getItem('smdss_session') || '{}');
     const citizenId = session.citizen_id || 'LB-1004';
 
-    authorizedFetch(`http://localhost:5000/api/citizens/${citizenId}/complaints`)
+    authorizedFetch(`${process.env.REACT_APP_API_BASE_URL}/api/citizens/${citizenId}/complaints`)
       .then(res => res.json())
       .then(async data => {
         if (data.complaints) {
@@ -27,7 +27,7 @@ const MyComplaints = () => {
         await Promise.all(
           data.complaints.map(async (c) => {
             try {
-              const res = await authorizedFetch(`http://localhost:5000/api/complaints/${c.complaint_id}/images`);
+              const res = await authorizedFetch(`${process.env.REACT_APP_API_BASE_URL}/api/complaints/${c.complaint_id}/images`);
               const imgData = await res.json();
               imagesObj[c.complaint_id] = imgData.images || [];
             } catch {
@@ -123,10 +123,10 @@ const MyComplaints = () => {
                    {imagesMap[complaint.complaint_id].map(img => (
                     <img
                      key={img.image_id}
-                     src={`http://localhost:5000${img.url}`}
+                     src={`${process.env.REACT_APP_API_BASE_URL}${img.url}`}
                      alt="complaint"
                       onClick={() =>
-                       setSelectedImage(`http://localhost:5000${img.url}`)
+                       setSelectedImage(`${process.env.REACT_APP_API_BASE_URL}${img.url}`)
                       }
                       style={{
                       width: 55,

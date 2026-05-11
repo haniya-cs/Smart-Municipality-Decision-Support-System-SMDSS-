@@ -32,7 +32,7 @@ const MyAccount = ({ roleLabel = 'User' }) => {
       }
 
       try {
-        const response = await authorizedFetch(`http://localhost:5000/api/users/${session.user_id}/profile`);
+        const response = await authorizedFetch(`${process.env.REACT_APP_API_BASE_URL}/api/users/${session.user_id}/profile`);
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Failed to load profile');
 
@@ -70,7 +70,7 @@ const MyAccount = ({ roleLabel = 'User' }) => {
         password: form.password.trim()
       };
 
-      const response = await authorizedFetch(`http://localhost:5000/api/users/${session.user_id}/profile`, {
+      const response = await authorizedFetch(`${process.env.REACT_APP_API_BASE_URL}/api/users/${session.user_id}/profile`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)

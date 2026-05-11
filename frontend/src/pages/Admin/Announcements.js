@@ -48,7 +48,7 @@ const AdminAnnouncements = () => {
         formDataToSend.append('image', formData.image);
       }
 
-      const response = await authorizedFetch('http://localhost:5000/api/announcements', {
+      const response = await authorizedFetch(`${process.env.REACT_APP_API_BASE_URL}/api/announcements`, {
         method: 'POST',
         body: formDataToSend
       });

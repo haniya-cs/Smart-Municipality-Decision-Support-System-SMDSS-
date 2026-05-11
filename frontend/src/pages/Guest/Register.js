@@ -24,7 +24,7 @@ const Register = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/verify-citizen-id', {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/api/verify-citizen-id`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ citizen_id: citizenId })
@@ -52,7 +52,7 @@ const Register = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/complete-registration', {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/api/complete-registration`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ citizen_id: citizenId, email, password, phone, address })  // Add address if needed

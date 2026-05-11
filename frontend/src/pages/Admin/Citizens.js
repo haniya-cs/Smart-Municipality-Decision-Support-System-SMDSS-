@@ -27,7 +27,7 @@ const AdminCitizens = () => {
   //handle update citizen details
   const handleUpdate = async () => {
     try {
-      const res = await authorizedFetch(`http://localhost:5000/api/admin/citizens/${selectedCitizen.user_id}`, {
+      const res = await authorizedFetch(`${process.env.REACT_APP_API_BASE_URL}/api/admin/citizens/${selectedCitizen.user_id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
@@ -52,7 +52,7 @@ const AdminCitizens = () => {
     if (!window.confirm("Are you sure you want to delete this citizen?")) return;
 
     try {
-      const res = await authorizedFetch(`http://localhost:5000/api/admin/citizens/${id}`, {
+      const res = await authorizedFetch(`${process.env.REACT_APP_API_BASE_URL}/api/admin/citizens/${id}`, {
         method: 'DELETE'
       });
 
@@ -66,7 +66,7 @@ const AdminCitizens = () => {
 
 
   useEffect(() => {
-    authorizedFetch('http://localhost:5000/api/admin/citizens')
+    authorizedFetch(`${process.env.REACT_APP_API_BASE_URL}/api/admin/citizens`)
       .then(res => res.json())
       .then(data => {
         if (data.citizens) setCitizens(data.citizens);

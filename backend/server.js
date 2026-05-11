@@ -15,7 +15,17 @@ const { registerAdminRoutes } = require("./routes/adminRoutes");
 const { registerPublicRoutes } = require("./routes/publicRoutes");
 
 const app = express();
-app.use(cors());
+const allowedOrigins = ["https://your-frontend-domain.com"];
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true,
+}));
 app.use(bodyParser.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
@@ -37,7 +47,7 @@ registerAnnouncementRoutes({ app, db, upload });
 registerAdminRoutes({ app, db, queryAsync, logSystemActivity });
 registerPublicRoutes({ app, queryAsync });
  
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });

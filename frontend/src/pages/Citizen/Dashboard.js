@@ -100,8 +100,8 @@ const Dashboard = () => {
   useEffect(() => {
     // Fetch Dues & Complaints concurrently
     Promise.all([
-      authorizedFetch(`http://localhost:5000/api/citizens/${citizenId}/dues`).then(res => res.json()).catch(() => ({})),
-      authorizedFetch(`http://localhost:5000/api/citizens/${citizenId}/complaints`).then(res => res.json()).catch(() => ({}))
+      authorizedFetch(`${process.env.REACT_APP_API_BASE_URL}/api/citizens/${citizenId}/dues`).then(res => res.json()).catch(() => ({})),
+      authorizedFetch(`${process.env.REACT_APP_API_BASE_URL}/api/citizens/${citizenId}/complaints`).then(res => res.json()).catch(() => ({}))
     ]).then(([duesData, complaintsData]) => {
       
       // Process Dues
