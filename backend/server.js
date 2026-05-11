@@ -15,15 +15,9 @@ const { registerAdminRoutes } = require("./routes/adminRoutes");
 const { registerPublicRoutes } = require("./routes/publicRoutes");
 
 const app = express();
-const allowedOrigins = ["https://smart-municipality-decision-support.vercel.app"];
+//const allowedOrigins = ["https://smart-municipality-decision-support.vercel.app"];
 app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
+ origin: "https://smart-municipality-decision-support.vercel.app",
   credentials: true,
 }));
 app.use(bodyParser.json());
