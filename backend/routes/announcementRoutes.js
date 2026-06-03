@@ -51,7 +51,25 @@ const registerAnnouncementRoutes = ({ app, db, upload }) => {
   app.get("/api/announcements/urgent", (req, res) => {
     db.query(
          `
-    SELECT a.*, u.full_name as admin_name
+        SELECT a.*, u.full_name as admin_name
+    FROM announcements a
+    LEFT JOIN users u ON a.admin_id = u.user_id
+    WHERE a.type = 'urgent'
+      AND a.publish_start <= NOW()
+      AND (a.publish_end IS NULL OR a.publish_end >= NOW())
+    ORDER BY a.announcement_id DESC
+    `,
+      (err, results) => {
+        if (err) return res.status(500).json({ error: "Database error" , details: err.message });
+        return res.json({ announcements: results });
+      }
+    );
+  });
+
+  app.get("/api/announcements/public", (req, res) => {
+    db.query(
+      `
+        SELECT a.*, u.full_name as admin_name
     FROM announcements a
     LEFT JOIN users u ON a.admin_id = u.user_id
     WHERE a.publish_start <= NOW()
@@ -65,33 +83,6 @@ const registerAnnouncementRoutes = ({ app, db, upload }) => {
         ELSE 5
       END,
       a.announcement_id DESC
-    `,
-      (err, results) => {
-        if (err) return res.status(500).json({ error: "Database error" , details: err.message });
-        return res.json({ announcements: results });
-      }
-    );
-  });
-
-  app.get("/api/announcements/public", (req, res) => {
-    db.query(
-      `
-      SELECT a.*, u.full_name as admin_name
-      FROM announcements a
-      LEFT JOIN users u ON a.admin_id = u.user_id
-      WHERE (
-        (a.publish_start IS NULL OR a.publish_start = '' OR a.publish_start <= NOW())
-        AND (a.publish_end IS NULL OR a.publish_end = '' OR a.publish_end >= NOW())
-      )
-      ORDER BY
-        CASE a.type
-          WHEN 'urgent' THEN 1
-          WHEN 'maintenance' THEN 2
-          WHEN 'meeting' THEN 3
-          WHEN 'event' THEN 4
-          ELSE 5
-        END,
-        a.announcement_id DESC
       `,
       (err, results) => {
         if (err) return res.status(500).json({ error: "Database error", details: err.message });
