@@ -86,13 +86,13 @@ const Announcements = () => {
 
   const filteredAnnouncements = announcementsList.filter((item) => {
 
-  if (item.publishStart && item.publishEnd) {
-    const start = new Date(item.publishStart);
-    const end = new Date(item.publishEnd);
-    if (currentTime < start || currentTime > end) {
-      return false;
-    }
-  }
+  //if (item.publishStart && item.publishEnd) {
+    //const start = new Date(item.publishStart);
+    //const end = new Date(item.publishEnd);
+    //if (currentTime < start || currentTime > end) {
+      //return false;
+    //}
+  //}
 
   if (filter === 'all') return true;
   if (filter === 'urgent') {
