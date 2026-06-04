@@ -4,6 +4,14 @@ const cors = require("cors");
 const bodyParser = require("body-parser");
 const path = require("path");
 
+const fs = require("fs");
+const uploadDir = path.join(__dirname, "uploads");
+
+// ✅ ensure folder exists BEFORE anything else
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
+
 const db = require("./db");
 const upload = require("./middleware/upload");
 const { initializeActivityUtils } = require("./utils/activity");
@@ -40,7 +48,7 @@ registerComplaintRoutes({ app, db, queryAsync, upload, logSystemActivity });
 registerAnnouncementRoutes({ app, db, upload });
 registerAdminRoutes({ app, db, queryAsync, logSystemActivity });
 registerPublicRoutes({ app, queryAsync });
- 
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

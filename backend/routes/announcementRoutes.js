@@ -55,8 +55,8 @@ const registerAnnouncementRoutes = ({ app, db, upload }) => {
     FROM announcements a
     LEFT JOIN users u ON a.admin_id = u.user_id
     WHERE a.type = 'urgent'
-      AND a.publish_start <= UTC_TIMESTAMP()
-      AND (a.publish_end IS NULL OR a.publish_end >= UTC_TIMESTAMP())
+      AND a.publish_start <= NOW()
+      AND (a.publish_end IS NULL OR a.publish_end >= NOW())
     ORDER BY a.announcement_id DESC
     `,
       (err, results) => {
@@ -72,8 +72,8 @@ const registerAnnouncementRoutes = ({ app, db, upload }) => {
         SELECT a.*, u.full_name as admin_name
     FROM announcements a
     LEFT JOIN users u ON a.admin_id = u.user_id
-    WHERE a.publish_start <= UTC_TIMESTAMP()
-      AND (a.publish_end IS NULL OR a.publish_end >= UTC_TIMESTAMP())
+    WHERE a.publish_start <= NOW()
+     AND (a.publish_end IS NULL OR a.publish_end >= NOW())
     ORDER BY
       CASE a.type
         WHEN 'urgent' THEN 1

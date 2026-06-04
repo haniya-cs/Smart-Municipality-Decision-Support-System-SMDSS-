@@ -33,7 +33,9 @@ const Announcements = () => {
           content: item.content,
           publishStart: item.publish_start,
           publishEnd: item.publish_end,
-          image: item.image ? `${process.env.REACT_APP_API_BASE_URL}${item.image}` : null,
+          image: item.image
+             ? `${process.env.REACT_APP_API_BASE_URL}${item.image.startsWith('/') ? '' : '/'}${item.image}`
+             : null,
           icon: getIconForType(item.type),
           admin_name: item.admin_name
         }));
