@@ -12,6 +12,8 @@ const registerAnnouncementRoutes = ({ app, db, upload }) => {
     }
 
     const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+    const publishStart = publish_start ? new Date(publish_start) : new Date();
+    const publishEnd = publish_end ? new Date(publish_end) : null;
     db.query("SELECT user_id FROM users WHERE citizen_id = ?", [admin_id], (err, result) => {
       if (err) return res.status(500).json({ error: err.message });
       if (result.length === 0) return res.status(404).json({ error: "User not found" });
@@ -21,7 +23,7 @@ const registerAnnouncementRoutes = ({ app, db, upload }) => {
         INSERT INTO announcements (admin_id, title, content, type, image, publish_start, publish_end)
         VALUES (?, ?, ?, ?, ?, ?, ?)
         `,
-        [result[0].user_id, title, content, finalType, imageUrl, publish_start || null, publish_end || null],
+        [result[0].user_id, title, content, finalType, imageUrl, publishStart, publishEnd ],
         (insertErr, insertResult) => {
           if (insertErr) return res.status(500).json({ error: "Database error", details: insertErr.message });
           return res.json({
@@ -55,8 +57,8 @@ const registerAnnouncementRoutes = ({ app, db, upload }) => {
     FROM announcements a
     LEFT JOIN users u ON a.admin_id = u.user_id
     WHERE a.type = 'urgent'
-      AND a.publish_start <= NOW()
-      AND (a.publish_end IS NULL OR a.publish_end >= NOW())
+      AND a.publish_start <= UTC_TIMESTAMP()
+      AND (a.publish_end IS NULL OR a.publish_end >= UTC_TIMESTAMP())
     ORDER BY a.announcement_id DESC
     `,
       (err, results) => {
@@ -72,8 +74,8 @@ const registerAnnouncementRoutes = ({ app, db, upload }) => {
         SELECT a.*, u.full_name as admin_name
     FROM announcements a
     LEFT JOIN users u ON a.admin_id = u.user_id
-    WHERE a.publish_start <= NOW()
-     AND (a.publish_end IS NULL OR a.publish_end >= NOW())
+    WHERE a.publish_start <= UTC_TIMESTAMP()
+     AND (a.publish_end IS NULL OR a.publish_end >= UTC_TIMESTAMP())
     ORDER BY
       CASE a.type
         WHEN 'urgent' THEN 1

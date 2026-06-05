@@ -31,7 +31,14 @@ const AdminAnnouncements = () => {
     e.preventDefault();
     setLoading(true);
     setMessage(null);
+   //UTC
+   const publishStartUTC = formData.publish_start
+  ? new Date(formData.publish_start).toISOString()
+  : '';
 
+const publishEndUTC = formData.publish_end
+  ? new Date(formData.publish_end).toISOString()
+  : '';
     try {
       // Get admin_id from localStorage (assuming it's stored after login)
       const session = JSON.parse(localStorage.getItem('smdss_session') || '{}');
@@ -41,8 +48,10 @@ const AdminAnnouncements = () => {
       formDataToSend.append('title', formData.title);
       formDataToSend.append('content', formData.content);
       formDataToSend.append('type',  (formData.type || 'general').toLowerCase().trim());
-      formDataToSend.append('publish_start', formData.publish_start);
-      formDataToSend.append('publish_end', formData.publish_end);
+      //formDataToSend.append('publish_start', formData.publish_start);
+      //formDataToSend.append('publish_end', formData.publish_end);
+      formDataToSend.append('publish_start', publishStartUTC);
+       formDataToSend.append('publish_end', publishEndUTC);
       
       if (formData.image) {
         formDataToSend.append('image', formData.image);
