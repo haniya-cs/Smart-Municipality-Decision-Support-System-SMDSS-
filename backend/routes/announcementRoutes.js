@@ -12,8 +12,8 @@ const registerAnnouncementRoutes = ({ app, db, upload }) => {
     }
 
     const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
-    const publishStart = publish_start || new Date().toISOString();
-    const publishEnd = publish_end || null;
+     const publishStart = publish_start;
+     const publishEnd = publish_end;
     db.query("SELECT user_id FROM users WHERE citizen_id = ?", [admin_id], (err, result) => {
       if (err) return res.status(500).json({ error: err.message });
       if (result.length === 0) return res.status(404).json({ error: "User not found" });
